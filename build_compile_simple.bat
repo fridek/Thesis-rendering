@@ -1,0 +1,1 @@
+C:/Python27/python.exe closure\closure/bin/build/closurebuilder.py --root=closure\closure --root=closure\third_party --root=src --namespace="Rendering" -o "compiled" --compiler_jar=..\closure\compiler-latest\compiler.jar --compiler_flags="--externs=externs\webgl.js" > build\release.js

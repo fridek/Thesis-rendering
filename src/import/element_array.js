@@ -9,7 +9,10 @@
 goog.require('goog.net.XhrIo');
 
 goog.provide("Rendering.Import.Element_Array");
-
+/**
+ *
+ * @constructor
+ */
 Rendering.Import.Element_Array = function() {
     this.load = function(verticesFile, facesFile, callback) {
         var oneCompleted = false;

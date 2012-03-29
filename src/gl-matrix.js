@@ -1,7 +1,7 @@
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations for WebGL
  * @author Brandon Jones
- * @version 1.2.3
+ * @version 1.2.4
  */
 
 /*
@@ -29,54 +29,59 @@
 
 "use strict";
 
+
+goog.provide("mat4");
+goog.provide("vec2");
+goog.provide("vec3");
+goog.provide("quat4");
+
 // Type declarations
-(function() {
+(function(_global) {
     // account for CommonJS environments
-    var _global = (typeof(exports) != 'undefined') ? global : window;
-    _global.glMatrixArrayType = _global.MatrixArray = null;
-
-    /**
-     * @class 3 Dimensional Vector
-     * @name vec3
-     */
-    _global.vec3 = {};
-
-    /**
-     * @class 3x3 Matrix
-     * @name mat3
-     */
-    _global.mat3 = {};
-
-    /**
-     * @class 4x4 Matrix
-     * @name mat4
-     */
-    _global.mat4 = {};
-
-    /**
-     * @class Quaternion
-     * @name quat4
-     */
-    _global.quat4 = {};
+    _global['glMatrixArrayType'] = _global['MatrixArray'] = null;
 
     // explicitly sets and returns the type of array to use within glMatrix
-    _global.setMatrixArrayType = function(type) {
-        return glMatrixArrayType = MatrixArray = type;
+    _global['setMatrixArrayType'] = function(type) {
+        return _global['glMatrixArrayType'] = _global['MatrixArray'] = type;
     };
 
     // auto-detects and returns the best type of array to use within glMatrix, falling
     // back to Array if typed arrays are unsupported
-    _global.determineMatrixArrayType = function() {
-        return setMatrixArrayType((typeof Float32Array !== 'undefined') ? Float32Array : Array);
+    _global['determineMatrixArrayType'] = function() {
+        return _global['setMatrixArrayType']((typeof Float32Array !== 'undefined') ? Float32Array : Array);
     };
 
-    determineMatrixArrayType();
-})();
+    _global['determineMatrixArrayType']();
+})((typeof(exports) != 'undefined') ? global : window);
+
+/**
+ * @class 3 Dimensional Vector
+ * @name vec3
+ */
+vec3 = {};
+
+/**
+ * @class 3x3 Matrix
+ * @name mat3
+ */
+mat3 = {};
+
+/**
+ * @class 4x4 Matrix
+ * @name mat4
+ */
+mat4 = {};
+
+/**
+ * @class Quaternion
+ * @name quat4
+ */
+quat4 = {};
 
 /*
  * vec3
  */
- 
+
 /**
  * Creates a new instance of a vec3 using the default array type
  * Any javascript array-like objects containing at least 3 numeric elements can serve as a vec3
@@ -367,7 +372,7 @@ vec3.dist = function (vec, vec2) {
     var x = vec2[0] - vec[0],
         y = vec2[1] - vec[1],
         z = vec2[2] - vec[2];
-        
+
     return Math.sqrt(x*x + y*y + z*z);
 };
 
@@ -388,22 +393,22 @@ vec3.unproject = function (vec, view, proj, viewport, dest) {
 
     var m = mat4.create();
     var v = new MatrixArray(4);
-    
+
     v[0] = (vec[0] - viewport[0]) * 2.0 / viewport[2] - 1.0;
     v[1] = (vec[1] - viewport[1]) * 2.0 / viewport[3] - 1.0;
     v[2] = 2.0 * vec[2] - 1.0;
     v[3] = 1.0;
-    
+
     mat4.multiply(proj, view, m);
     if(!mat4.inverse(m)) { return null; }
-    
+
     mat4.multiplyVec4(m, v);
     if(v[3] === 0.0) { return null; }
 
     dest[0] = v[0] / v[3];
     dest[1] = v[1] / v[3];
     dest[2] = v[2] / v[3];
-    
+
     return dest;
 };
 
@@ -730,11 +735,11 @@ mat4.determinant = function (mat) {
         a30 = mat[12], a31 = mat[13], a32 = mat[14], a33 = mat[15];
 
     return (a30 * a21 * a12 * a03 - a20 * a31 * a12 * a03 - a30 * a11 * a22 * a03 + a10 * a31 * a22 * a03 +
-            a20 * a11 * a32 * a03 - a10 * a21 * a32 * a03 - a30 * a21 * a02 * a13 + a20 * a31 * a02 * a13 +
-            a30 * a01 * a22 * a13 - a00 * a31 * a22 * a13 - a20 * a01 * a32 * a13 + a00 * a21 * a32 * a13 +
-            a30 * a11 * a02 * a23 - a10 * a31 * a02 * a23 - a30 * a01 * a12 * a23 + a00 * a31 * a12 * a23 +
-            a10 * a01 * a32 * a23 - a00 * a11 * a32 * a23 - a20 * a11 * a02 * a33 + a10 * a21 * a02 * a33 +
-            a20 * a01 * a12 * a33 - a00 * a21 * a12 * a33 - a10 * a01 * a22 * a33 + a00 * a11 * a22 * a33);
+        a20 * a11 * a32 * a03 - a10 * a21 * a32 * a03 - a30 * a21 * a02 * a13 + a20 * a31 * a02 * a13 +
+        a30 * a01 * a22 * a13 - a00 * a31 * a22 * a13 - a20 * a01 * a32 * a13 + a00 * a21 * a32 * a13 +
+        a30 * a11 * a02 * a23 - a10 * a31 * a02 * a23 - a30 * a01 * a12 * a23 + a00 * a31 * a12 * a23 +
+        a10 * a01 * a32 * a23 - a00 * a11 * a32 * a23 - a20 * a11 * a02 * a33 + a10 * a21 * a02 * a33 +
+        a20 * a01 * a12 * a33 - a00 * a21 * a12 * a33 - a10 * a01 * a22 * a33 + a00 * a11 * a22 * a33);
 };
 
 /**
@@ -770,9 +775,9 @@ mat4.inverse = function (mat, dest) {
         d = (b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06),
         invDet;
 
-        // Calculate the determinant
-        if (!d) { return null; }
-        invDet = 1 / d;
+    // Calculate the determinant
+    if (!d) { return null; }
+    invDet = 1 / d;
 
     dest[0] = (a11 * b11 - a12 * b10 + a13 * b09) * invDet;
     dest[1] = (-a01 * b11 + a02 * b10 - a03 * b09) * invDet;
@@ -1068,7 +1073,7 @@ mat4.scale = function (mat, vec, dest) {
  *
  * @param {mat4} mat mat4 to rotate
  * @param {number} angle Angle (in radians) to rotate
- * @param {vec3} axis vec3 representing the axis to rotate around 
+ * @param {vec3} axis vec3 representing the axis to rotate around
  * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
  *
  * @returns {mat4} dest if specified, mat otherwise
@@ -1511,7 +1516,7 @@ mat4.fromRotationTranslation = function (quat, vec, dest) {
     dest[13] = vec[1];
     dest[14] = vec[2];
     dest[15] = 1;
-    
+
     return dest;
 };
 
@@ -1573,8 +1578,8 @@ quat4.set = function (quat, dest) {
 
 /**
  * Calculates the W component of a quat4 from the X, Y, and Z components.
- * Assumes that quaternion is 1 unit in length. 
- * Any existing W component will be ignored. 
+ * Assumes that quaternion is 1 unit in length.
+ * Any existing W component will be ignored.
  *
  * @param {quat4} quat quat4 to calculate W component of
  * @param {quat4} [dest] quat4 receiving calculated values. If not specified result is written to quat
@@ -1619,9 +1624,9 @@ quat4.inverse = function(quat, dest) {
     var q0 = quat[0], q1 = quat[1], q2 = quat[2], q3 = quat[3],
         dot = q0*q0 + q1*q1 + q2*q2 + q3*q3,
         invDot = dot ? 1.0/dot : 0;
-    
+
     // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
-    
+
     if(!dest || quat === dest) {
         quat[0] *= -invDot;
         quat[1] *= -invDot;
@@ -1741,7 +1746,7 @@ quat4.multiplyVec3 = function (quat, vec, dest) {
     var x = vec[0], y = vec[1], z = vec[2],
         qx = quat[0], qy = quat[1], qz = quat[2], qw = quat[3],
 
-        // calculate quat * vec
+    // calculate quat * vec
         ix = qw * x + qy * z - qz * y,
         iy = qw * y + qz * x - qx * z,
         iz = qw * z + qx * y - qy * x,

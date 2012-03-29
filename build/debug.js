@@ -1497,97 +1497,1920 @@ goog.scope = function(fn) {
 
 
 /**
- * Created by JetBrains PhpStorm.
- * User: fridek
- * Date: 10.03.12
- * Time: 13:18
- * To change this template use File | Settings | File Templates.
+ * @fileoverview gl-matrix - High performance matrix and vector operations for WebGL
+ * @author Brandon Jones
+ * @version 1.2.4
  */
 
-goog.provide("Rendering.Programs.Texture");
+/*
+ * Copyright (c) 2011 Brandon Jones
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ *    1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ *
+ *    2. Altered source versions must be plainly marked as such, and must not
+ *    be misrepresented as being the original software.
+ *
+ *    3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
 
-Rendering.Programs.Texture.init = function(gl) {
-    var vshader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vshader,[
-        'attribute vec3 vertexPosition;',
-        'attribute vec3 vertexNormal;',
-        'attribute vec2 vertexTextureCoords;',
+"use strict";
 
-        'varying mediump vec2 texture_coordinates;',
 
-        'uniform mat4 MVMatrix;',
+goog.provide("mat4");
+goog.provide("vec2");
+goog.provide("vec3");
+goog.provide("quat4");
 
-        'void main(void)',
-        '{',
-            'texture_coordinates = vertexTextureCoords;',
-            'gl_Position = MVMatrix * vec4(vertexPosition, 1.0);',
-        '}'].join("\n")
-    );
-    gl.compileShader(vshader);
-    if (!gl.getShaderParameter(vshader, gl.COMPILE_STATUS)) {
-        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
+// Type declarations
+(function(_global) {
+    // account for CommonJS environments
+    _global['glMatrixArrayType'] = _global['MatrixArray'] = null;
+
+    // explicitly sets and returns the type of array to use within glMatrix
+    _global['setMatrixArrayType'] = function(type) {
+        return _global['glMatrixArrayType'] = _global['MatrixArray'] = type;
+    };
+
+    // auto-detects and returns the best type of array to use within glMatrix, falling
+    // back to Array if typed arrays are unsupported
+    _global['determineMatrixArrayType'] = function() {
+        return _global['setMatrixArrayType']((typeof Float32Array !== 'undefined') ? Float32Array : Array);
+    };
+
+    _global['determineMatrixArrayType']();
+})((typeof(exports) != 'undefined') ? global : window);
+
+/**
+ * @class 3 Dimensional Vector
+ * @name vec3
+ */
+vec3 = {};
+
+/**
+ * @class 3x3 Matrix
+ * @name mat3
+ */
+mat3 = {};
+
+/**
+ * @class 4x4 Matrix
+ * @name mat4
+ */
+mat4 = {};
+
+/**
+ * @class Quaternion
+ * @name quat4
+ */
+quat4 = {};
+
+/*
+ * vec3
+ */
+
+/**
+ * Creates a new instance of a vec3 using the default array type
+ * Any javascript array-like objects containing at least 3 numeric elements can serve as a vec3
+ *
+ * @param {vec3} [vec] vec3 containing values to initialize with
+ *
+ * @returns {vec3} New vec3
+ */
+vec3.create = function (vec) {
+    var dest = new MatrixArray(3);
+
+    if (vec) {
+        dest[0] = vec[0];
+        dest[1] = vec[1];
+        dest[2] = vec[2];
+    } else {
+        dest[0] = dest[1] = dest[2] = 0;
     }
 
-
-    var fshader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fshader, [
-        'varying mediump vec2 texture_coordinates;',
-        'uniform sampler2D texture_unit;',
-
-        'void main(void)',
-        '{',
-            'gl_FragColor = texture2D(texture_unit, vec2(texture_coordinates.s, texture_coordinates.t));',
-        '}'].join("\n"));
-    gl.compileShader(fshader);
-    if (!gl.getShaderParameter(fshader, gl.COMPILE_STATUS)) {
-        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
-    }
-
-    var program = gl.createProgram();
-    gl.attachShader(program, fshader);
-    gl.attachShader(program, vshader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
-        alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
-        return;
-    }
-
-    // Validates and uses program in the GL context
-    gl.validateProgram(program);
-    if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-        alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
-        return;
-    }
-
-    this.program = program;
-    this.uniforms=  {
-            MVMatrix: gl.getUniformLocation(program, "MVMatrix"),
-            texture_unit: gl.getUniformLocation(program, "texture_unit")
-        };
-    this.attribs = {
-            vertexPosition: gl.getAttribLocation(program, 'vertexPosition'),
-            vertexNormal: gl.getAttribLocation(program, 'vertexNormal'),
-            vertexTextureCoords: gl.getAttribLocation(program, 'vertexTextureCoords')
-        };
-    gl.enableVertexAttribArray(this.attribs.vertexPosition);
-    gl.enableVertexAttribArray(this.attribs.vertexNormal);
-    gl.enableVertexAttribArray(this.attribs.vertexTextureCoords);
+    return dest;
 };
 
-Rendering.Programs.Texture.draw = function(gl, model) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.verticesBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Texture.attribs.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.normalsBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Texture.attribs.vertexNormal, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.uvsBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Texture.attribs.vertexTextureCoords, 2, gl.FLOAT, false, 0, 0);
+/**
+ * Copies the values of one vec3 to another
+ *
+ * @param {vec3} vec vec3 containing values to copy
+ * @param {vec3} dest vec3 receiving copied values
+ *
+ * @returns {vec3} dest
+ */
+vec3.set = function (vec, dest) {
+    dest[0] = vec[0];
+    dest[1] = vec[1];
+    dest[2] = vec[2];
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, model.texture);
-    gl.uniform1i(Rendering.Programs.Texture.uniforms.texture_unit, 0);
+    return dest;
+};
 
-    gl.drawArrays(gl.TRIANGLES, 0, model.verticesBufferSize);
-};/**
+/**
+ * Performs a vector addition
+ *
+ * @param {vec3} vec First operand
+ * @param {vec3} vec2 Second operand
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.add = function (vec, vec2, dest) {
+    if (!dest || vec === dest) {
+        vec[0] += vec2[0];
+        vec[1] += vec2[1];
+        vec[2] += vec2[2];
+        return vec;
+    }
+
+    dest[0] = vec[0] + vec2[0];
+    dest[1] = vec[1] + vec2[1];
+    dest[2] = vec[2] + vec2[2];
+    return dest;
+};
+
+/**
+ * Performs a vector subtraction
+ *
+ * @param {vec3} vec First operand
+ * @param {vec3} vec2 Second operand
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.subtract = function (vec, vec2, dest) {
+    if (!dest || vec === dest) {
+        vec[0] -= vec2[0];
+        vec[1] -= vec2[1];
+        vec[2] -= vec2[2];
+        return vec;
+    }
+
+    dest[0] = vec[0] - vec2[0];
+    dest[1] = vec[1] - vec2[1];
+    dest[2] = vec[2] - vec2[2];
+    return dest;
+};
+
+/**
+ * Performs a vector multiplication
+ *
+ * @param {vec3} vec First operand
+ * @param {vec3} vec2 Second operand
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.multiply = function (vec, vec2, dest) {
+    if (!dest || vec === dest) {
+        vec[0] *= vec2[0];
+        vec[1] *= vec2[1];
+        vec[2] *= vec2[2];
+        return vec;
+    }
+
+    dest[0] = vec[0] * vec2[0];
+    dest[1] = vec[1] * vec2[1];
+    dest[2] = vec[2] * vec2[2];
+    return dest;
+};
+
+/**
+ * Negates the components of a vec3
+ *
+ * @param {vec3} vec vec3 to negate
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.negate = function (vec, dest) {
+    if (!dest) { dest = vec; }
+
+    dest[0] = -vec[0];
+    dest[1] = -vec[1];
+    dest[2] = -vec[2];
+    return dest;
+};
+
+/**
+ * Multiplies the components of a vec3 by a scalar value
+ *
+ * @param {vec3} vec vec3 to scale
+ * @param {number} val Value to scale by
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.scale = function (vec, val, dest) {
+    if (!dest || vec === dest) {
+        vec[0] *= val;
+        vec[1] *= val;
+        vec[2] *= val;
+        return vec;
+    }
+
+    dest[0] = vec[0] * val;
+    dest[1] = vec[1] * val;
+    dest[2] = vec[2] * val;
+    return dest;
+};
+
+/**
+ * Generates a unit vector of the same direction as the provided vec3
+ * If vector length is 0, returns [0, 0, 0]
+ *
+ * @param {vec3} vec vec3 to normalize
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.normalize = function (vec, dest) {
+    if (!dest) { dest = vec; }
+
+    var x = vec[0], y = vec[1], z = vec[2],
+        len = Math.sqrt(x * x + y * y + z * z);
+
+    if (!len) {
+        dest[0] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        return dest;
+    } else if (len === 1) {
+        dest[0] = x;
+        dest[1] = y;
+        dest[2] = z;
+        return dest;
+    }
+
+    len = 1 / len;
+    dest[0] = x * len;
+    dest[1] = y * len;
+    dest[2] = z * len;
+    return dest;
+};
+
+/**
+ * Generates the cross product of two vec3s
+ *
+ * @param {vec3} vec First operand
+ * @param {vec3} vec2 Second operand
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.cross = function (vec, vec2, dest) {
+    if (!dest) { dest = vec; }
+
+    var x = vec[0], y = vec[1], z = vec[2],
+        x2 = vec2[0], y2 = vec2[1], z2 = vec2[2];
+
+    dest[0] = y * z2 - z * y2;
+    dest[1] = z * x2 - x * z2;
+    dest[2] = x * y2 - y * x2;
+    return dest;
+};
+
+/**
+ * Caclulates the length of a vec3
+ *
+ * @param {vec3} vec vec3 to calculate length of
+ *
+ * @returns {number} Length of vec
+ */
+vec3.length = function (vec) {
+    var x = vec[0], y = vec[1], z = vec[2];
+    return Math.sqrt(x * x + y * y + z * z);
+};
+
+/**
+ * Caclulates the dot product of two vec3s
+ *
+ * @param {vec3} vec First operand
+ * @param {vec3} vec2 Second operand
+ *
+ * @returns {number} Dot product of vec and vec2
+ */
+vec3.dot = function (vec, vec2) {
+    return vec[0] * vec2[0] + vec[1] * vec2[1] + vec[2] * vec2[2];
+};
+
+/**
+ * Generates a unit vector pointing from one vector to another
+ *
+ * @param {vec3} vec Origin vec3
+ * @param {vec3} vec2 vec3 to point to
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.direction = function (vec, vec2, dest) {
+    if (!dest) { dest = vec; }
+
+    var x = vec[0] - vec2[0],
+        y = vec[1] - vec2[1],
+        z = vec[2] - vec2[2],
+        len = Math.sqrt(x * x + y * y + z * z);
+
+    if (!len) {
+        dest[0] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        return dest;
+    }
+
+    len = 1 / len;
+    dest[0] = x * len;
+    dest[1] = y * len;
+    dest[2] = z * len;
+    return dest;
+};
+
+/**
+ * Performs a linear interpolation between two vec3
+ *
+ * @param {vec3} vec First vector
+ * @param {vec3} vec2 Second vector
+ * @param {number} lerp Interpolation amount between the two inputs
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.lerp = function (vec, vec2, lerp, dest) {
+    if (!dest) { dest = vec; }
+
+    dest[0] = vec[0] + lerp * (vec2[0] - vec[0]);
+    dest[1] = vec[1] + lerp * (vec2[1] - vec[1]);
+    dest[2] = vec[2] + lerp * (vec2[2] - vec[2]);
+
+    return dest;
+};
+
+/**
+ * Calculates the euclidian distance between two vec3
+ *
+ * Params:
+ * @param {vec3} vec First vector
+ * @param {vec3} vec2 Second vector
+ *
+ * @returns {number} Distance between vec and vec2
+ */
+vec3.dist = function (vec, vec2) {
+    var x = vec2[0] - vec[0],
+        y = vec2[1] - vec[1],
+        z = vec2[2] - vec[2];
+
+    return Math.sqrt(x*x + y*y + z*z);
+};
+
+/**
+ * Projects the specified vec3 from screen space into object space
+ * Based on the <a href="http://webcvs.freedesktop.org/mesa/Mesa/src/glu/mesa/project.c?revision=1.4&view=markup">Mesa gluUnProject implementation</a>
+ *
+ * @param {vec3} vec Screen-space vector to project
+ * @param {mat4} view View matrix
+ * @param {mat4} proj Projection matrix
+ * @param {vec4} viewport Viewport as given to gl.viewport [x, y, width, height]
+ * @param {vec3} [dest] vec3 receiving unprojected result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+vec3.unproject = function (vec, view, proj, viewport, dest) {
+    if (!dest) { dest = vec; }
+
+    var m = mat4.create();
+    var v = new MatrixArray(4);
+
+    v[0] = (vec[0] - viewport[0]) * 2.0 / viewport[2] - 1.0;
+    v[1] = (vec[1] - viewport[1]) * 2.0 / viewport[3] - 1.0;
+    v[2] = 2.0 * vec[2] - 1.0;
+    v[3] = 1.0;
+
+    mat4.multiply(proj, view, m);
+    if(!mat4.inverse(m)) { return null; }
+
+    mat4.multiplyVec4(m, v);
+    if(v[3] === 0.0) { return null; }
+
+    dest[0] = v[0] / v[3];
+    dest[1] = v[1] / v[3];
+    dest[2] = v[2] / v[3];
+
+    return dest;
+};
+
+/**
+ * Returns a string representation of a vector
+ *
+ * @param {vec3} vec Vector to represent as a string
+ *
+ * @returns {string} String representation of vec
+ */
+vec3.str = function (vec) {
+    return '[' + vec[0] + ', ' + vec[1] + ', ' + vec[2] + ']';
+};
+
+/*
+ * mat3
+ */
+
+/**
+ * Creates a new instance of a mat3 using the default array type
+ * Any javascript array-like object containing at least 9 numeric elements can serve as a mat3
+ *
+ * @param {mat3} [mat] mat3 containing values to initialize with
+ *
+ * @returns {mat3} New mat3
+ */
+mat3.create = function (mat) {
+    var dest = new MatrixArray(9);
+
+    if (mat) {
+        dest[0] = mat[0];
+        dest[1] = mat[1];
+        dest[2] = mat[2];
+        dest[3] = mat[3];
+        dest[4] = mat[4];
+        dest[5] = mat[5];
+        dest[6] = mat[6];
+        dest[7] = mat[7];
+        dest[8] = mat[8];
+    }
+
+    return dest;
+};
+
+/**
+ * Copies the values of one mat3 to another
+ *
+ * @param {mat3} mat mat3 containing values to copy
+ * @param {mat3} dest mat3 receiving copied values
+ *
+ * @returns {mat3} dest
+ */
+mat3.set = function (mat, dest) {
+    dest[0] = mat[0];
+    dest[1] = mat[1];
+    dest[2] = mat[2];
+    dest[3] = mat[3];
+    dest[4] = mat[4];
+    dest[5] = mat[5];
+    dest[6] = mat[6];
+    dest[7] = mat[7];
+    dest[8] = mat[8];
+    return dest;
+};
+
+/**
+ * Sets a mat3 to an identity matrix
+ *
+ * @param {mat3} dest mat3 to set
+ *
+ * @returns dest if specified, otherwise a new mat3
+ */
+mat3.identity = function (dest) {
+    if (!dest) { dest = mat3.create(); }
+    dest[0] = 1;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 1;
+    dest[5] = 0;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 1;
+    return dest;
+};
+
+/**
+ * Transposes a mat3 (flips the values over the diagonal)
+ *
+ * Params:
+ * @param {mat3} mat mat3 to transpose
+ * @param {mat3} [dest] mat3 receiving transposed values. If not specified result is written to mat
+ *
+ * @returns {mat3} dest is specified, mat otherwise
+ */
+mat3.transpose = function (mat, dest) {
+    // If we are transposing ourselves we can skip a few steps but have to cache some values
+    if (!dest || mat === dest) {
+        var a01 = mat[1], a02 = mat[2],
+            a12 = mat[5];
+
+        mat[1] = mat[3];
+        mat[2] = mat[6];
+        mat[3] = a01;
+        mat[5] = mat[7];
+        mat[6] = a02;
+        mat[7] = a12;
+        return mat;
+    }
+
+    dest[0] = mat[0];
+    dest[1] = mat[3];
+    dest[2] = mat[6];
+    dest[3] = mat[1];
+    dest[4] = mat[4];
+    dest[5] = mat[7];
+    dest[6] = mat[2];
+    dest[7] = mat[5];
+    dest[8] = mat[8];
+    return dest;
+};
+
+/**
+ * Copies the elements of a mat3 into the upper 3x3 elements of a mat4
+ *
+ * @param {mat3} mat mat3 containing values to copy
+ * @param {mat4} [dest] mat4 receiving copied values
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+mat3.toMat4 = function (mat, dest) {
+    if (!dest) { dest = mat4.create(); }
+
+    dest[15] = 1;
+    dest[14] = 0;
+    dest[13] = 0;
+    dest[12] = 0;
+
+    dest[11] = 0;
+    dest[10] = mat[8];
+    dest[9] = mat[7];
+    dest[8] = mat[6];
+
+    dest[7] = 0;
+    dest[6] = mat[5];
+    dest[5] = mat[4];
+    dest[4] = mat[3];
+
+    dest[3] = 0;
+    dest[2] = mat[2];
+    dest[1] = mat[1];
+    dest[0] = mat[0];
+
+    return dest;
+};
+
+/**
+ * Returns a string representation of a mat3
+ *
+ * @param {mat3} mat mat3 to represent as a string
+ *
+ * @param {string} String representation of mat
+ */
+mat3.str = function (mat) {
+    return '[' + mat[0] + ', ' + mat[1] + ', ' + mat[2] +
+        ', ' + mat[3] + ', ' + mat[4] + ', ' + mat[5] +
+        ', ' + mat[6] + ', ' + mat[7] + ', ' + mat[8] + ']';
+};
+
+/*
+ * mat4
+ */
+
+/**
+ * Creates a new instance of a mat4 using the default array type
+ * Any javascript array-like object containing at least 16 numeric elements can serve as a mat4
+ *
+ * @param {mat4} [mat] mat4 containing values to initialize with
+ *
+ * @returns {mat4} New mat4
+ */
+mat4.create = function (mat) {
+    var dest = new MatrixArray(16);
+
+    if (mat) {
+        dest[0] = mat[0];
+        dest[1] = mat[1];
+        dest[2] = mat[2];
+        dest[3] = mat[3];
+        dest[4] = mat[4];
+        dest[5] = mat[5];
+        dest[6] = mat[6];
+        dest[7] = mat[7];
+        dest[8] = mat[8];
+        dest[9] = mat[9];
+        dest[10] = mat[10];
+        dest[11] = mat[11];
+        dest[12] = mat[12];
+        dest[13] = mat[13];
+        dest[14] = mat[14];
+        dest[15] = mat[15];
+    }
+
+    return dest;
+};
+
+/**
+ * Copies the values of one mat4 to another
+ *
+ * @param {mat4} mat mat4 containing values to copy
+ * @param {mat4} dest mat4 receiving copied values
+ *
+ * @returns {mat4} dest
+ */
+mat4.set = function (mat, dest) {
+    dest[0] = mat[0];
+    dest[1] = mat[1];
+    dest[2] = mat[2];
+    dest[3] = mat[3];
+    dest[4] = mat[4];
+    dest[5] = mat[5];
+    dest[6] = mat[6];
+    dest[7] = mat[7];
+    dest[8] = mat[8];
+    dest[9] = mat[9];
+    dest[10] = mat[10];
+    dest[11] = mat[11];
+    dest[12] = mat[12];
+    dest[13] = mat[13];
+    dest[14] = mat[14];
+    dest[15] = mat[15];
+    return dest;
+};
+
+/**
+ * Sets a mat4 to an identity matrix
+ *
+ * @param {mat4} dest mat4 to set
+ *
+ * @returns {mat4} dest
+ */
+mat4.identity = function (dest) {
+    if (!dest) { dest = mat4.create(); }
+    dest[0] = 1;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = 1;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = 1;
+    dest[11] = 0;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
+};
+
+/**
+ * Transposes a mat4 (flips the values over the diagonal)
+ *
+ * @param {mat4} mat mat4 to transpose
+ * @param {mat4} [dest] mat4 receiving transposed values. If not specified result is written to mat
+ *
+ * @param {mat4} dest is specified, mat otherwise
+ */
+mat4.transpose = function (mat, dest) {
+    // If we are transposing ourselves we can skip a few steps but have to cache some values
+    if (!dest || mat === dest) {
+        var a01 = mat[1], a02 = mat[2], a03 = mat[3],
+            a12 = mat[6], a13 = mat[7],
+            a23 = mat[11];
+
+        mat[1] = mat[4];
+        mat[2] = mat[8];
+        mat[3] = mat[12];
+        mat[4] = a01;
+        mat[6] = mat[9];
+        mat[7] = mat[13];
+        mat[8] = a02;
+        mat[9] = a12;
+        mat[11] = mat[14];
+        mat[12] = a03;
+        mat[13] = a13;
+        mat[14] = a23;
+        return mat;
+    }
+
+    dest[0] = mat[0];
+    dest[1] = mat[4];
+    dest[2] = mat[8];
+    dest[3] = mat[12];
+    dest[4] = mat[1];
+    dest[5] = mat[5];
+    dest[6] = mat[9];
+    dest[7] = mat[13];
+    dest[8] = mat[2];
+    dest[9] = mat[6];
+    dest[10] = mat[10];
+    dest[11] = mat[14];
+    dest[12] = mat[3];
+    dest[13] = mat[7];
+    dest[14] = mat[11];
+    dest[15] = mat[15];
+    return dest;
+};
+
+/**
+ * Calculates the determinant of a mat4
+ *
+ * @param {mat4} mat mat4 to calculate determinant of
+ *
+ * @returns {number} determinant of mat
+ */
+mat4.determinant = function (mat) {
+    // Cache the matrix values (makes for huge speed increases!)
+    var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3],
+        a10 = mat[4], a11 = mat[5], a12 = mat[6], a13 = mat[7],
+        a20 = mat[8], a21 = mat[9], a22 = mat[10], a23 = mat[11],
+        a30 = mat[12], a31 = mat[13], a32 = mat[14], a33 = mat[15];
+
+    return (a30 * a21 * a12 * a03 - a20 * a31 * a12 * a03 - a30 * a11 * a22 * a03 + a10 * a31 * a22 * a03 +
+        a20 * a11 * a32 * a03 - a10 * a21 * a32 * a03 - a30 * a21 * a02 * a13 + a20 * a31 * a02 * a13 +
+        a30 * a01 * a22 * a13 - a00 * a31 * a22 * a13 - a20 * a01 * a32 * a13 + a00 * a21 * a32 * a13 +
+        a30 * a11 * a02 * a23 - a10 * a31 * a02 * a23 - a30 * a01 * a12 * a23 + a00 * a31 * a12 * a23 +
+        a10 * a01 * a32 * a23 - a00 * a11 * a32 * a23 - a20 * a11 * a02 * a33 + a10 * a21 * a02 * a33 +
+        a20 * a01 * a12 * a33 - a00 * a21 * a12 * a33 - a10 * a01 * a22 * a33 + a00 * a11 * a22 * a33);
+};
+
+/**
+ * Calculates the inverse matrix of a mat4
+ *
+ * @param {mat4} mat mat4 to calculate inverse of
+ * @param {mat4} [dest] mat4 receiving inverse matrix. If not specified result is written to mat
+ *
+ * @param {mat4} dest is specified, mat otherwise, null if matrix cannot be inverted
+ */
+mat4.inverse = function (mat, dest) {
+    if (!dest) { dest = mat; }
+
+    // Cache the matrix values (makes for huge speed increases!)
+    var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3],
+        a10 = mat[4], a11 = mat[5], a12 = mat[6], a13 = mat[7],
+        a20 = mat[8], a21 = mat[9], a22 = mat[10], a23 = mat[11],
+        a30 = mat[12], a31 = mat[13], a32 = mat[14], a33 = mat[15],
+
+        b00 = a00 * a11 - a01 * a10,
+        b01 = a00 * a12 - a02 * a10,
+        b02 = a00 * a13 - a03 * a10,
+        b03 = a01 * a12 - a02 * a11,
+        b04 = a01 * a13 - a03 * a11,
+        b05 = a02 * a13 - a03 * a12,
+        b06 = a20 * a31 - a21 * a30,
+        b07 = a20 * a32 - a22 * a30,
+        b08 = a20 * a33 - a23 * a30,
+        b09 = a21 * a32 - a22 * a31,
+        b10 = a21 * a33 - a23 * a31,
+        b11 = a22 * a33 - a23 * a32,
+
+        d = (b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06),
+        invDet;
+
+    // Calculate the determinant
+    if (!d) { return null; }
+    invDet = 1 / d;
+
+    dest[0] = (a11 * b11 - a12 * b10 + a13 * b09) * invDet;
+    dest[1] = (-a01 * b11 + a02 * b10 - a03 * b09) * invDet;
+    dest[2] = (a31 * b05 - a32 * b04 + a33 * b03) * invDet;
+    dest[3] = (-a21 * b05 + a22 * b04 - a23 * b03) * invDet;
+    dest[4] = (-a10 * b11 + a12 * b08 - a13 * b07) * invDet;
+    dest[5] = (a00 * b11 - a02 * b08 + a03 * b07) * invDet;
+    dest[6] = (-a30 * b05 + a32 * b02 - a33 * b01) * invDet;
+    dest[7] = (a20 * b05 - a22 * b02 + a23 * b01) * invDet;
+    dest[8] = (a10 * b10 - a11 * b08 + a13 * b06) * invDet;
+    dest[9] = (-a00 * b10 + a01 * b08 - a03 * b06) * invDet;
+    dest[10] = (a30 * b04 - a31 * b02 + a33 * b00) * invDet;
+    dest[11] = (-a20 * b04 + a21 * b02 - a23 * b00) * invDet;
+    dest[12] = (-a10 * b09 + a11 * b07 - a12 * b06) * invDet;
+    dest[13] = (a00 * b09 - a01 * b07 + a02 * b06) * invDet;
+    dest[14] = (-a30 * b03 + a31 * b01 - a32 * b00) * invDet;
+    dest[15] = (a20 * b03 - a21 * b01 + a22 * b00) * invDet;
+
+    return dest;
+};
+
+/**
+ * Copies the upper 3x3 elements of a mat4 into another mat4
+ *
+ * @param {mat4} mat mat4 containing values to copy
+ * @param {mat4} [dest] mat4 receiving copied values
+ *
+ * @returns {mat4} dest is specified, a new mat4 otherwise
+ */
+mat4.toRotationMat = function (mat, dest) {
+    if (!dest) { dest = mat4.create(); }
+
+    dest[0] = mat[0];
+    dest[1] = mat[1];
+    dest[2] = mat[2];
+    dest[3] = mat[3];
+    dest[4] = mat[4];
+    dest[5] = mat[5];
+    dest[6] = mat[6];
+    dest[7] = mat[7];
+    dest[8] = mat[8];
+    dest[9] = mat[9];
+    dest[10] = mat[10];
+    dest[11] = mat[11];
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+
+    return dest;
+};
+
+/**
+ * Copies the upper 3x3 elements of a mat4 into a mat3
+ *
+ * @param {mat4} mat mat4 containing values to copy
+ * @param {mat3} [dest] mat3 receiving copied values
+ *
+ * @returns {mat3} dest is specified, a new mat3 otherwise
+ */
+mat4.toMat3 = function (mat, dest) {
+    if (!dest) { dest = mat3.create(); }
+
+    dest[0] = mat[0];
+    dest[1] = mat[1];
+    dest[2] = mat[2];
+    dest[3] = mat[4];
+    dest[4] = mat[5];
+    dest[5] = mat[6];
+    dest[6] = mat[8];
+    dest[7] = mat[9];
+    dest[8] = mat[10];
+
+    return dest;
+};
+
+/**
+ * Calculates the inverse of the upper 3x3 elements of a mat4 and copies the result into a mat3
+ * The resulting matrix is useful for calculating transformed normals
+ *
+ * Params:
+ * @param {mat4} mat mat4 containing values to invert and copy
+ * @param {mat3} [dest] mat3 receiving values
+ *
+ * @returns {mat3} dest is specified, a new mat3 otherwise, null if the matrix cannot be inverted
+ */
+mat4.toInverseMat3 = function (mat, dest) {
+    // Cache the matrix values (makes for huge speed increases!)
+    var a00 = mat[0], a01 = mat[1], a02 = mat[2],
+        a10 = mat[4], a11 = mat[5], a12 = mat[6],
+        a20 = mat[8], a21 = mat[9], a22 = mat[10],
+
+        b01 = a22 * a11 - a12 * a21,
+        b11 = -a22 * a10 + a12 * a20,
+        b21 = a21 * a10 - a11 * a20,
+
+        d = a00 * b01 + a01 * b11 + a02 * b21,
+        id;
+
+    if (!d) { return null; }
+    id = 1 / d;
+
+    if (!dest) { dest = mat3.create(); }
+
+    dest[0] = b01 * id;
+    dest[1] = (-a22 * a01 + a02 * a21) * id;
+    dest[2] = (a12 * a01 - a02 * a11) * id;
+    dest[3] = b11 * id;
+    dest[4] = (a22 * a00 - a02 * a20) * id;
+    dest[5] = (-a12 * a00 + a02 * a10) * id;
+    dest[6] = b21 * id;
+    dest[7] = (-a21 * a00 + a01 * a20) * id;
+    dest[8] = (a11 * a00 - a01 * a10) * id;
+
+    return dest;
+};
+
+/**
+ * Performs a matrix multiplication
+ *
+ * @param {mat4} mat First operand
+ * @param {mat4} mat2 Second operand
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @returns {mat4} dest if specified, mat otherwise
+ */
+mat4.multiply = function (mat, mat2, dest) {
+    if (!dest) { dest = mat; }
+
+    // Cache the matrix values (makes for huge speed increases!)
+    var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3],
+        a10 = mat[4], a11 = mat[5], a12 = mat[6], a13 = mat[7],
+        a20 = mat[8], a21 = mat[9], a22 = mat[10], a23 = mat[11],
+        a30 = mat[12], a31 = mat[13], a32 = mat[14], a33 = mat[15],
+
+        b00 = mat2[0], b01 = mat2[1], b02 = mat2[2], b03 = mat2[3],
+        b10 = mat2[4], b11 = mat2[5], b12 = mat2[6], b13 = mat2[7],
+        b20 = mat2[8], b21 = mat2[9], b22 = mat2[10], b23 = mat2[11],
+        b30 = mat2[12], b31 = mat2[13], b32 = mat2[14], b33 = mat2[15];
+
+    dest[0] = b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30;
+    dest[1] = b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31;
+    dest[2] = b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32;
+    dest[3] = b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33;
+    dest[4] = b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30;
+    dest[5] = b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31;
+    dest[6] = b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32;
+    dest[7] = b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33;
+    dest[8] = b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30;
+    dest[9] = b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31;
+    dest[10] = b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32;
+    dest[11] = b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33;
+    dest[12] = b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30;
+    dest[13] = b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31;
+    dest[14] = b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32;
+    dest[15] = b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33;
+
+    return dest;
+};
+
+/**
+ * Transforms a vec3 with the given matrix
+ * 4th vector component is implicitly '1'
+ *
+ * @param {mat4} mat mat4 to transform the vector with
+ * @param {vec3} vec vec3 to transform
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec3} dest if specified, vec otherwise
+ */
+mat4.multiplyVec3 = function (mat, vec, dest) {
+    if (!dest) { dest = vec; }
+
+    var x = vec[0], y = vec[1], z = vec[2];
+
+    dest[0] = mat[0] * x + mat[4] * y + mat[8] * z + mat[12];
+    dest[1] = mat[1] * x + mat[5] * y + mat[9] * z + mat[13];
+    dest[2] = mat[2] * x + mat[6] * y + mat[10] * z + mat[14];
+
+    return dest;
+};
+
+/**
+ * Transforms a vec4 with the given matrix
+ *
+ * @param {mat4} mat mat4 to transform the vector with
+ * @param {vec4} vec vec4 to transform
+ * @param {vec4} [dest] vec4 receiving operation result. If not specified result is written to vec
+ *
+ * @returns {vec4} dest if specified, vec otherwise
+ */
+mat4.multiplyVec4 = function (mat, vec, dest) {
+    if (!dest) { dest = vec; }
+
+    var x = vec[0], y = vec[1], z = vec[2], w = vec[3];
+
+    dest[0] = mat[0] * x + mat[4] * y + mat[8] * z + mat[12] * w;
+    dest[1] = mat[1] * x + mat[5] * y + mat[9] * z + mat[13] * w;
+    dest[2] = mat[2] * x + mat[6] * y + mat[10] * z + mat[14] * w;
+    dest[3] = mat[3] * x + mat[7] * y + mat[11] * z + mat[15] * w;
+
+    return dest;
+};
+
+/**
+ * Translates a matrix by the given vector
+ *
+ * @param {mat4} mat mat4 to translate
+ * @param {vec3} vec vec3 specifying the translation
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @returns {mat4} dest if specified, mat otherwise
+ */
+mat4.translate = function (mat, vec, dest) {
+    var x = vec[0], y = vec[1], z = vec[2],
+        a00, a01, a02, a03,
+        a10, a11, a12, a13,
+        a20, a21, a22, a23;
+
+    if (!dest || mat === dest) {
+        mat[12] = mat[0] * x + mat[4] * y + mat[8] * z + mat[12];
+        mat[13] = mat[1] * x + mat[5] * y + mat[9] * z + mat[13];
+        mat[14] = mat[2] * x + mat[6] * y + mat[10] * z + mat[14];
+        mat[15] = mat[3] * x + mat[7] * y + mat[11] * z + mat[15];
+        return mat;
+    }
+
+    a00 = mat[0]; a01 = mat[1]; a02 = mat[2]; a03 = mat[3];
+    a10 = mat[4]; a11 = mat[5]; a12 = mat[6]; a13 = mat[7];
+    a20 = mat[8]; a21 = mat[9]; a22 = mat[10]; a23 = mat[11];
+
+    dest[0] = a00; dest[1] = a01; dest[2] = a02; dest[3] = a03;
+    dest[4] = a10; dest[5] = a11; dest[6] = a12; dest[7] = a13;
+    dest[8] = a20; dest[9] = a21; dest[10] = a22; dest[11] = a23;
+
+    dest[12] = a00 * x + a10 * y + a20 * z + mat[12];
+    dest[13] = a01 * x + a11 * y + a21 * z + mat[13];
+    dest[14] = a02 * x + a12 * y + a22 * z + mat[14];
+    dest[15] = a03 * x + a13 * y + a23 * z + mat[15];
+    return dest;
+};
+
+/**
+ * Scales a matrix by the given vector
+ *
+ * @param {mat4} mat mat4 to scale
+ * @param {vec3} vec vec3 specifying the scale for each axis
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @param {mat4} dest if specified, mat otherwise
+ */
+mat4.scale = function (mat, vec, dest) {
+    var x = vec[0], y = vec[1], z = vec[2];
+
+    if (!dest || mat === dest) {
+        mat[0] *= x;
+        mat[1] *= x;
+        mat[2] *= x;
+        mat[3] *= x;
+        mat[4] *= y;
+        mat[5] *= y;
+        mat[6] *= y;
+        mat[7] *= y;
+        mat[8] *= z;
+        mat[9] *= z;
+        mat[10] *= z;
+        mat[11] *= z;
+        return mat;
+    }
+
+    dest[0] = mat[0] * x;
+    dest[1] = mat[1] * x;
+    dest[2] = mat[2] * x;
+    dest[3] = mat[3] * x;
+    dest[4] = mat[4] * y;
+    dest[5] = mat[5] * y;
+    dest[6] = mat[6] * y;
+    dest[7] = mat[7] * y;
+    dest[8] = mat[8] * z;
+    dest[9] = mat[9] * z;
+    dest[10] = mat[10] * z;
+    dest[11] = mat[11] * z;
+    dest[12] = mat[12];
+    dest[13] = mat[13];
+    dest[14] = mat[14];
+    dest[15] = mat[15];
+    return dest;
+};
+
+/**
+ * Rotates a matrix by the given angle around the specified axis
+ * If rotating around a primary axis (X,Y,Z) one of the specialized rotation functions should be used instead for performance
+ *
+ * @param {mat4} mat mat4 to rotate
+ * @param {number} angle Angle (in radians) to rotate
+ * @param {vec3} axis vec3 representing the axis to rotate around
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @returns {mat4} dest if specified, mat otherwise
+ */
+mat4.rotate = function (mat, angle, axis, dest) {
+    var x = axis[0], y = axis[1], z = axis[2],
+        len = Math.sqrt(x * x + y * y + z * z),
+        s, c, t,
+        a00, a01, a02, a03,
+        a10, a11, a12, a13,
+        a20, a21, a22, a23,
+        b00, b01, b02,
+        b10, b11, b12,
+        b20, b21, b22;
+
+    if (!len) { return null; }
+    if (len !== 1) {
+        len = 1 / len;
+        x *= len;
+        y *= len;
+        z *= len;
+    }
+
+    s = Math.sin(angle);
+    c = Math.cos(angle);
+    t = 1 - c;
+
+    a00 = mat[0]; a01 = mat[1]; a02 = mat[2]; a03 = mat[3];
+    a10 = mat[4]; a11 = mat[5]; a12 = mat[6]; a13 = mat[7];
+    a20 = mat[8]; a21 = mat[9]; a22 = mat[10]; a23 = mat[11];
+
+    // Construct the elements of the rotation matrix
+    b00 = x * x * t + c; b01 = y * x * t + z * s; b02 = z * x * t - y * s;
+    b10 = x * y * t - z * s; b11 = y * y * t + c; b12 = z * y * t + x * s;
+    b20 = x * z * t + y * s; b21 = y * z * t - x * s; b22 = z * z * t + c;
+
+    if (!dest) {
+        dest = mat;
+    } else if (mat !== dest) { // If the source and destination differ, copy the unchanged last row
+        dest[12] = mat[12];
+        dest[13] = mat[13];
+        dest[14] = mat[14];
+        dest[15] = mat[15];
+    }
+
+    // Perform rotation-specific matrix multiplication
+    dest[0] = a00 * b00 + a10 * b01 + a20 * b02;
+    dest[1] = a01 * b00 + a11 * b01 + a21 * b02;
+    dest[2] = a02 * b00 + a12 * b01 + a22 * b02;
+    dest[3] = a03 * b00 + a13 * b01 + a23 * b02;
+
+    dest[4] = a00 * b10 + a10 * b11 + a20 * b12;
+    dest[5] = a01 * b10 + a11 * b11 + a21 * b12;
+    dest[6] = a02 * b10 + a12 * b11 + a22 * b12;
+    dest[7] = a03 * b10 + a13 * b11 + a23 * b12;
+
+    dest[8] = a00 * b20 + a10 * b21 + a20 * b22;
+    dest[9] = a01 * b20 + a11 * b21 + a21 * b22;
+    dest[10] = a02 * b20 + a12 * b21 + a22 * b22;
+    dest[11] = a03 * b20 + a13 * b21 + a23 * b22;
+    return dest;
+};
+
+/**
+ * Rotates a matrix by the given angle around the X axis
+ *
+ * @param {mat4} mat mat4 to rotate
+ * @param {number} angle Angle (in radians) to rotate
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @returns {mat4} dest if specified, mat otherwise
+ */
+mat4.rotateX = function (mat, angle, dest) {
+    var s = Math.sin(angle),
+        c = Math.cos(angle),
+        a10 = mat[4],
+        a11 = mat[5],
+        a12 = mat[6],
+        a13 = mat[7],
+        a20 = mat[8],
+        a21 = mat[9],
+        a22 = mat[10],
+        a23 = mat[11];
+
+    if (!dest) {
+        dest = mat;
+    } else if (mat !== dest) { // If the source and destination differ, copy the unchanged rows
+        dest[0] = mat[0];
+        dest[1] = mat[1];
+        dest[2] = mat[2];
+        dest[3] = mat[3];
+
+        dest[12] = mat[12];
+        dest[13] = mat[13];
+        dest[14] = mat[14];
+        dest[15] = mat[15];
+    }
+
+    // Perform axis-specific matrix multiplication
+    dest[4] = a10 * c + a20 * s;
+    dest[5] = a11 * c + a21 * s;
+    dest[6] = a12 * c + a22 * s;
+    dest[7] = a13 * c + a23 * s;
+
+    dest[8] = a10 * -s + a20 * c;
+    dest[9] = a11 * -s + a21 * c;
+    dest[10] = a12 * -s + a22 * c;
+    dest[11] = a13 * -s + a23 * c;
+    return dest;
+};
+
+/**
+ * Rotates a matrix by the given angle around the Y axis
+ *
+ * @param {mat4} mat mat4 to rotate
+ * @param {number} angle Angle (in radians) to rotate
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @returns {mat4} dest if specified, mat otherwise
+ */
+mat4.rotateY = function (mat, angle, dest) {
+    var s = Math.sin(angle),
+        c = Math.cos(angle),
+        a00 = mat[0],
+        a01 = mat[1],
+        a02 = mat[2],
+        a03 = mat[3],
+        a20 = mat[8],
+        a21 = mat[9],
+        a22 = mat[10],
+        a23 = mat[11];
+
+    if (!dest) {
+        dest = mat;
+    } else if (mat !== dest) { // If the source and destination differ, copy the unchanged rows
+        dest[4] = mat[4];
+        dest[5] = mat[5];
+        dest[6] = mat[6];
+        dest[7] = mat[7];
+
+        dest[12] = mat[12];
+        dest[13] = mat[13];
+        dest[14] = mat[14];
+        dest[15] = mat[15];
+    }
+
+    // Perform axis-specific matrix multiplication
+    dest[0] = a00 * c + a20 * -s;
+    dest[1] = a01 * c + a21 * -s;
+    dest[2] = a02 * c + a22 * -s;
+    dest[3] = a03 * c + a23 * -s;
+
+    dest[8] = a00 * s + a20 * c;
+    dest[9] = a01 * s + a21 * c;
+    dest[10] = a02 * s + a22 * c;
+    dest[11] = a03 * s + a23 * c;
+    return dest;
+};
+
+/**
+ * Rotates a matrix by the given angle around the Z axis
+ *
+ * @param {mat4} mat mat4 to rotate
+ * @param {number} angle Angle (in radians) to rotate
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ *
+ * @returns {mat4} dest if specified, mat otherwise
+ */
+mat4.rotateZ = function (mat, angle, dest) {
+    var s = Math.sin(angle),
+        c = Math.cos(angle),
+        a00 = mat[0],
+        a01 = mat[1],
+        a02 = mat[2],
+        a03 = mat[3],
+        a10 = mat[4],
+        a11 = mat[5],
+        a12 = mat[6],
+        a13 = mat[7];
+
+    if (!dest) {
+        dest = mat;
+    } else if (mat !== dest) { // If the source and destination differ, copy the unchanged last row
+        dest[8] = mat[8];
+        dest[9] = mat[9];
+        dest[10] = mat[10];
+        dest[11] = mat[11];
+
+        dest[12] = mat[12];
+        dest[13] = mat[13];
+        dest[14] = mat[14];
+        dest[15] = mat[15];
+    }
+
+    // Perform axis-specific matrix multiplication
+    dest[0] = a00 * c + a10 * s;
+    dest[1] = a01 * c + a11 * s;
+    dest[2] = a02 * c + a12 * s;
+    dest[3] = a03 * c + a13 * s;
+
+    dest[4] = a00 * -s + a10 * c;
+    dest[5] = a01 * -s + a11 * c;
+    dest[6] = a02 * -s + a12 * c;
+    dest[7] = a03 * -s + a13 * c;
+
+    return dest;
+};
+
+/**
+ * Generates a frustum matrix with the given bounds
+ *
+ * @param {number} left Left bound of the frustum
+ * @param {number} right Right bound of the frustum
+ * @param {number} bottom Bottom bound of the frustum
+ * @param {number} top Top bound of the frustum
+ * @param {number} near Near bound of the frustum
+ * @param {number} far Far bound of the frustum
+ * @param {mat4} [dest] mat4 frustum matrix will be written into
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+mat4.frustum = function (left, right, bottom, top, near, far, dest) {
+    if (!dest) { dest = mat4.create(); }
+    var rl = (right - left),
+        tb = (top - bottom),
+        fn = (far - near);
+    dest[0] = (near * 2) / rl;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = (near * 2) / tb;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = (right + left) / rl;
+    dest[9] = (top + bottom) / tb;
+    dest[10] = -(far + near) / fn;
+    dest[11] = -1;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = -(far * near * 2) / fn;
+    dest[15] = 0;
+    return dest;
+};
+
+/**
+ * Generates a perspective projection matrix with the given bounds
+ *
+ * @param {number} fovy Vertical field of view
+ * @param {number} aspect Aspect ratio. typically viewport width/height
+ * @param {number} near Near bound of the frustum
+ * @param {number} far Far bound of the frustum
+ * @param {mat4} [dest] mat4 frustum matrix will be written into
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+mat4.perspective = function (fovy, aspect, near, far, dest) {
+    var top = near * Math.tan(fovy * Math.PI / 360.0),
+        right = top * aspect;
+    return mat4.frustum(-right, right, -top, top, near, far, dest);
+};
+
+/**
+ * Generates a orthogonal projection matrix with the given bounds
+ *
+ * @param {number} left Left bound of the frustum
+ * @param {number} right Right bound of the frustum
+ * @param {number} bottom Bottom bound of the frustum
+ * @param {number} top Top bound of the frustum
+ * @param {number} near Near bound of the frustum
+ * @param {number} far Far bound of the frustum
+ * @param {mat4} [dest] mat4 frustum matrix will be written into
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+mat4.ortho = function (left, right, bottom, top, near, far, dest) {
+    if (!dest) { dest = mat4.create(); }
+    var rl = (right - left),
+        tb = (top - bottom),
+        fn = (far - near);
+    dest[0] = 2 / rl;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = 2 / tb;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = -2 / fn;
+    dest[11] = 0;
+    dest[12] = -(left + right) / rl;
+    dest[13] = -(top + bottom) / tb;
+    dest[14] = -(far + near) / fn;
+    dest[15] = 1;
+    return dest;
+};
+
+/**
+ * Generates a look-at matrix with the given eye position, focal point, and up axis
+ *
+ * @param {vec3} eye Position of the viewer
+ * @param {vec3} center Point the viewer is looking at
+ * @param {vec3} up vec3 pointing "up"
+ * @param {mat4} [dest] mat4 frustum matrix will be written into
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+mat4.lookAt = function (eye, center, up, dest) {
+    if (!dest) { dest = mat4.create(); }
+
+    var x0, x1, x2, y0, y1, y2, z0, z1, z2, len,
+        eyex = eye[0],
+        eyey = eye[1],
+        eyez = eye[2],
+        upx = up[0],
+        upy = up[1],
+        upz = up[2],
+        centerx = center[0],
+        centery = center[1],
+        centerz = center[2];
+
+    if (eyex === centerx && eyey === centery && eyez === centerz) {
+        return mat4.identity(dest);
+    }
+
+    //vec3.direction(eye, center, z);
+    z0 = eyex - centerx;
+    z1 = eyey - centery;
+    z2 = eyez - centerz;
+
+    // normalize (no check needed for 0 because of early return)
+    len = 1 / Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2);
+    z0 *= len;
+    z1 *= len;
+    z2 *= len;
+
+    //vec3.normalize(vec3.cross(up, z, x));
+    x0 = upy * z2 - upz * z1;
+    x1 = upz * z0 - upx * z2;
+    x2 = upx * z1 - upy * z0;
+    len = Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2);
+    if (!len) {
+        x0 = 0;
+        x1 = 0;
+        x2 = 0;
+    } else {
+        len = 1 / len;
+        x0 *= len;
+        x1 *= len;
+        x2 *= len;
+    }
+
+    //vec3.normalize(vec3.cross(z, x, y));
+    y0 = z1 * x2 - z2 * x1;
+    y1 = z2 * x0 - z0 * x2;
+    y2 = z0 * x1 - z1 * x0;
+
+    len = Math.sqrt(y0 * y0 + y1 * y1 + y2 * y2);
+    if (!len) {
+        y0 = 0;
+        y1 = 0;
+        y2 = 0;
+    } else {
+        len = 1 / len;
+        y0 *= len;
+        y1 *= len;
+        y2 *= len;
+    }
+
+    dest[0] = x0;
+    dest[1] = y0;
+    dest[2] = z0;
+    dest[3] = 0;
+    dest[4] = x1;
+    dest[5] = y1;
+    dest[6] = z1;
+    dest[7] = 0;
+    dest[8] = x2;
+    dest[9] = y2;
+    dest[10] = z2;
+    dest[11] = 0;
+    dest[12] = -(x0 * eyex + x1 * eyey + x2 * eyez);
+    dest[13] = -(y0 * eyex + y1 * eyey + y2 * eyez);
+    dest[14] = -(z0 * eyex + z1 * eyey + z2 * eyez);
+    dest[15] = 1;
+
+    return dest;
+};
+
+/**
+ * Creates a matrix from a quaternion rotation and vector translation
+ * This is equivalent to (but much faster than):
+ *
+ *     mat4.identity(dest);
+ *     mat4.translate(dest, vec);
+ *     var quatMat = mat4.create();
+ *     quat4.toMat4(quat, quatMat);
+ *     mat4.multiply(dest, quatMat);
+ *
+ * @param {quat4} quat Rotation quaternion
+ * @param {vec3} vec Translation vector
+ * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to a new mat4
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+mat4.fromRotationTranslation = function (quat, vec, dest) {
+    if (!dest) { dest = mat4.create(); }
+
+    // Quaternion math
+    var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
+        x2 = x + x,
+        y2 = y + y,
+        z2 = z + z,
+
+        xx = x * x2,
+        xy = x * y2,
+        xz = x * z2,
+        yy = y * y2,
+        yz = y * z2,
+        zz = z * z2,
+        wx = w * x2,
+        wy = w * y2,
+        wz = w * z2;
+
+    dest[0] = 1 - (yy + zz);
+    dest[1] = xy + wz;
+    dest[2] = xz - wy;
+    dest[3] = 0;
+    dest[4] = xy - wz;
+    dest[5] = 1 - (xx + zz);
+    dest[6] = yz + wx;
+    dest[7] = 0;
+    dest[8] = xz + wy;
+    dest[9] = yz - wx;
+    dest[10] = 1 - (xx + yy);
+    dest[11] = 0;
+    dest[12] = vec[0];
+    dest[13] = vec[1];
+    dest[14] = vec[2];
+    dest[15] = 1;
+
+    return dest;
+};
+
+/**
+ * Returns a string representation of a mat4
+ *
+ * @param {mat4} mat mat4 to represent as a string
+ *
+ * @returns {string} String representation of mat
+ */
+mat4.str = function (mat) {
+    return '[' + mat[0] + ', ' + mat[1] + ', ' + mat[2] + ', ' + mat[3] +
+        ', ' + mat[4] + ', ' + mat[5] + ', ' + mat[6] + ', ' + mat[7] +
+        ', ' + mat[8] + ', ' + mat[9] + ', ' + mat[10] + ', ' + mat[11] +
+        ', ' + mat[12] + ', ' + mat[13] + ', ' + mat[14] + ', ' + mat[15] + ']';
+};
+
+/*
+ * quat4
+ */
+
+/**
+ * Creates a new instance of a quat4 using the default array type
+ * Any javascript array containing at least 4 numeric elements can serve as a quat4
+ *
+ * @param {quat4} [quat] quat4 containing values to initialize with
+ *
+ * @returns {quat4} New quat4
+ */
+quat4.create = function (quat) {
+    var dest = new MatrixArray(4);
+
+    if (quat) {
+        dest[0] = quat[0];
+        dest[1] = quat[1];
+        dest[2] = quat[2];
+        dest[3] = quat[3];
+    }
+
+    return dest;
+};
+
+/**
+ * Copies the values of one quat4 to another
+ *
+ * @param {quat4} quat quat4 containing values to copy
+ * @param {quat4} dest quat4 receiving copied values
+ *
+ * @returns {quat4} dest
+ */
+quat4.set = function (quat, dest) {
+    dest[0] = quat[0];
+    dest[1] = quat[1];
+    dest[2] = quat[2];
+    dest[3] = quat[3];
+
+    return dest;
+};
+
+/**
+ * Calculates the W component of a quat4 from the X, Y, and Z components.
+ * Assumes that quaternion is 1 unit in length.
+ * Any existing W component will be ignored.
+ *
+ * @param {quat4} quat quat4 to calculate W component of
+ * @param {quat4} [dest] quat4 receiving calculated values. If not specified result is written to quat
+ *
+ * @returns {quat4} dest if specified, quat otherwise
+ */
+quat4.calculateW = function (quat, dest) {
+    var x = quat[0], y = quat[1], z = quat[2];
+
+    if (!dest || quat === dest) {
+        quat[3] = -Math.sqrt(Math.abs(1.0 - x * x - y * y - z * z));
+        return quat;
+    }
+    dest[0] = x;
+    dest[1] = y;
+    dest[2] = z;
+    dest[3] = -Math.sqrt(Math.abs(1.0 - x * x - y * y - z * z));
+    return dest;
+};
+
+/**
+ * Calculates the dot product of two quaternions
+ *
+ * @param {quat4} quat First operand
+ * @param {quat4} quat2 Second operand
+ *
+ * @return {number} Dot product of quat and quat2
+ */
+quat4.dot = function(quat, quat2){
+    return quat[0]*quat2[0] + quat[1]*quat2[1] + quat[2]*quat2[2] + quat[3]*quat2[3];
+};
+
+/**
+ * Calculates the inverse of a quat4
+ *
+ * @param {quat4} quat quat4 to calculate inverse of
+ * @param {quat4} [dest] quat4 receiving inverse values. If not specified result is written to quat
+ *
+ * @returns {quat4} dest if specified, quat otherwise
+ */
+quat4.inverse = function(quat, dest) {
+    var q0 = quat[0], q1 = quat[1], q2 = quat[2], q3 = quat[3],
+        dot = q0*q0 + q1*q1 + q2*q2 + q3*q3,
+        invDot = dot ? 1.0/dot : 0;
+
+    // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
+
+    if(!dest || quat === dest) {
+        quat[0] *= -invDot;
+        quat[1] *= -invDot;
+        quat[2] *= -invDot;
+        quat[3] *= invDot;
+        return quat;
+    }
+    dest[0] = -quat[0]*invDot;
+    dest[1] = -quat[1]*invDot;
+    dest[2] = -quat[2]*invDot;
+    dest[3] = quat[3]*invDot;
+    return dest;
+};
+
+
+/**
+ * Calculates the conjugate of a quat4
+ * If the quaternion is normalized, this function is faster than quat4.inverse and produces the same result.
+ *
+ * @param {quat4} quat quat4 to calculate conjugate of
+ * @param {quat4} [dest] quat4 receiving conjugate values. If not specified result is written to quat
+ *
+ * @returns {quat4} dest if specified, quat otherwise
+ */
+quat4.conjugate = function (quat, dest) {
+    if (!dest || quat === dest) {
+        quat[0] *= -1;
+        quat[1] *= -1;
+        quat[2] *= -1;
+        return quat;
+    }
+    dest[0] = -quat[0];
+    dest[1] = -quat[1];
+    dest[2] = -quat[2];
+    dest[3] = quat[3];
+    return dest;
+};
+
+/**
+ * Calculates the length of a quat4
+ *
+ * Params:
+ * @param {quat4} quat quat4 to calculate length of
+ *
+ * @returns Length of quat
+ */
+quat4.length = function (quat) {
+    var x = quat[0], y = quat[1], z = quat[2], w = quat[3];
+    return Math.sqrt(x * x + y * y + z * z + w * w);
+};
+
+/**
+ * Generates a unit quaternion of the same direction as the provided quat4
+ * If quaternion length is 0, returns [0, 0, 0, 0]
+ *
+ * @param {quat4} quat quat4 to normalize
+ * @param {quat4} [dest] quat4 receiving operation result. If not specified result is written to quat
+ *
+ * @returns {quat4} dest if specified, quat otherwise
+ */
+quat4.normalize = function (quat, dest) {
+    if (!dest) { dest = quat; }
+
+    var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
+        len = Math.sqrt(x * x + y * y + z * z + w * w);
+    if (len === 0) {
+        dest[0] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        dest[3] = 0;
+        return dest;
+    }
+    len = 1 / len;
+    dest[0] = x * len;
+    dest[1] = y * len;
+    dest[2] = z * len;
+    dest[3] = w * len;
+
+    return dest;
+};
+
+/**
+ * Performs a quaternion multiplication
+ *
+ * @param {quat4} quat First operand
+ * @param {quat4} quat2 Second operand
+ * @param {quat4} [dest] quat4 receiving operation result. If not specified result is written to quat
+ *
+ * @returns {quat4} dest if specified, quat otherwise
+ */
+quat4.multiply = function (quat, quat2, dest) {
+    if (!dest) { dest = quat; }
+
+    var qax = quat[0], qay = quat[1], qaz = quat[2], qaw = quat[3],
+        qbx = quat2[0], qby = quat2[1], qbz = quat2[2], qbw = quat2[3];
+
+    dest[0] = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
+    dest[1] = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
+    dest[2] = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
+    dest[3] = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
+
+    return dest;
+};
+
+/**
+ * Transforms a vec3 with the given quaternion
+ *
+ * @param {quat4} quat quat4 to transform the vector with
+ * @param {vec3} vec vec3 to transform
+ * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ *
+ * @returns dest if specified, vec otherwise
+ */
+quat4.multiplyVec3 = function (quat, vec, dest) {
+    if (!dest) { dest = vec; }
+
+    var x = vec[0], y = vec[1], z = vec[2],
+        qx = quat[0], qy = quat[1], qz = quat[2], qw = quat[3],
+
+    // calculate quat * vec
+        ix = qw * x + qy * z - qz * y,
+        iy = qw * y + qz * x - qx * z,
+        iz = qw * z + qx * y - qy * x,
+        iw = -qx * x - qy * y - qz * z;
+
+    // calculate result * inverse quat
+    dest[0] = ix * qw + iw * -qx + iy * -qz - iz * -qy;
+    dest[1] = iy * qw + iw * -qy + iz * -qx - ix * -qz;
+    dest[2] = iz * qw + iw * -qz + ix * -qy - iy * -qx;
+
+    return dest;
+};
+
+/**
+ * Calculates a 3x3 matrix from the given quat4
+ *
+ * @param {quat4} quat quat4 to create matrix from
+ * @param {mat3} [dest] mat3 receiving operation result
+ *
+ * @returns {mat3} dest if specified, a new mat3 otherwise
+ */
+quat4.toMat3 = function (quat, dest) {
+    if (!dest) { dest = mat3.create(); }
+
+    var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
+        x2 = x + x,
+        y2 = y + y,
+        z2 = z + z,
+
+        xx = x * x2,
+        xy = x * y2,
+        xz = x * z2,
+        yy = y * y2,
+        yz = y * z2,
+        zz = z * z2,
+        wx = w * x2,
+        wy = w * y2,
+        wz = w * z2;
+
+    dest[0] = 1 - (yy + zz);
+    dest[1] = xy + wz;
+    dest[2] = xz - wy;
+
+    dest[3] = xy - wz;
+    dest[4] = 1 - (xx + zz);
+    dest[5] = yz + wx;
+
+    dest[6] = xz + wy;
+    dest[7] = yz - wx;
+    dest[8] = 1 - (xx + yy);
+
+    return dest;
+};
+
+/**
+ * Calculates a 4x4 matrix from the given quat4
+ *
+ * @param {quat4} quat quat4 to create matrix from
+ * @param {mat4} [dest] mat4 receiving operation result
+ *
+ * @returns {mat4} dest if specified, a new mat4 otherwise
+ */
+quat4.toMat4 = function (quat, dest) {
+    if (!dest) { dest = mat4.create(); }
+
+    var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
+        x2 = x + x,
+        y2 = y + y,
+        z2 = z + z,
+
+        xx = x * x2,
+        xy = x * y2,
+        xz = x * z2,
+        yy = y * y2,
+        yz = y * z2,
+        zz = z * z2,
+        wx = w * x2,
+        wy = w * y2,
+        wz = w * z2;
+
+    dest[0] = 1 - (yy + zz);
+    dest[1] = xy + wz;
+    dest[2] = xz - wy;
+    dest[3] = 0;
+
+    dest[4] = xy - wz;
+    dest[5] = 1 - (xx + zz);
+    dest[6] = yz + wx;
+    dest[7] = 0;
+
+    dest[8] = xz + wy;
+    dest[9] = yz - wx;
+    dest[10] = 1 - (xx + yy);
+    dest[11] = 0;
+
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+
+    return dest;
+};
+
+/**
+ * Performs a spherical linear interpolation between two quat4
+ *
+ * @param {quat4} quat First quaternion
+ * @param {quat4} quat2 Second quaternion
+ * @param {number} slerp Interpolation amount between the two inputs
+ * @param {quat4} [dest] quat4 receiving operation result. If not specified result is written to quat
+ *
+ * @returns {quat4} dest if specified, quat otherwise
+ */
+quat4.slerp = function (quat, quat2, slerp, dest) {
+    if (!dest) { dest = quat; }
+
+    var cosHalfTheta = quat[0] * quat2[0] + quat[1] * quat2[1] + quat[2] * quat2[2] + quat[3] * quat2[3],
+        halfTheta,
+        sinHalfTheta,
+        ratioA,
+        ratioB;
+
+    if (Math.abs(cosHalfTheta) >= 1.0) {
+        if (dest !== quat) {
+            dest[0] = quat[0];
+            dest[1] = quat[1];
+            dest[2] = quat[2];
+            dest[3] = quat[3];
+        }
+        return dest;
+    }
+
+    halfTheta = Math.acos(cosHalfTheta);
+    sinHalfTheta = Math.sqrt(1.0 - cosHalfTheta * cosHalfTheta);
+
+    if (Math.abs(sinHalfTheta) < 0.001) {
+        dest[0] = (quat[0] * 0.5 + quat2[0] * 0.5);
+        dest[1] = (quat[1] * 0.5 + quat2[1] * 0.5);
+        dest[2] = (quat[2] * 0.5 + quat2[2] * 0.5);
+        dest[3] = (quat[3] * 0.5 + quat2[3] * 0.5);
+        return dest;
+    }
+
+    ratioA = Math.sin((1 - slerp) * halfTheta) / sinHalfTheta;
+    ratioB = Math.sin(slerp * halfTheta) / sinHalfTheta;
+
+    dest[0] = (quat[0] * ratioA + quat2[0] * ratioB);
+    dest[1] = (quat[1] * ratioA + quat2[1] * ratioB);
+    dest[2] = (quat[2] * ratioA + quat2[2] * ratioB);
+    dest[3] = (quat[3] * ratioA + quat2[3] * ratioB);
+
+    return dest;
+};
+
+/**
+ * Returns a string representation of a quaternion
+ *
+ * @param {quat4} quat quat4 to represent as a string
+ *
+ * @returns {string} String representation of quat
+ */
+quat4.str = function (quat) {
+    return '[' + quat[0] + ', ' + quat[1] + ', ' + quat[2] + ', ' + quat[3] + ']';
+};
+
+/**
  * Created by JetBrains PhpStorm.
  * User: fridek
  * Date: 10.03.12
@@ -1597,45 +3420,118 @@ Rendering.Programs.Texture.draw = function(gl, model) {
 
 goog.provide("Rendering.Model");
 
+/**
+ *
+ * @constructor
+ */
 Rendering.Model = function() {
+    /**
+     * @type {Boolean}
+     */
+    this.textureLoaded = false;
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Float32Array} vertices
+ */
+Rendering.Model.prototype.createVerticesBuffer = function(gl, vertices) {
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.verticesBuffer = gl.createBuffer();
+    /**
+     * @type {Number}
+     */
+    this.verticesBufferSize = vertices.length/3;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.verticesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Float32Array} normals
+ */
+Rendering.Model.prototype.createNormalsBuffer = function(gl, normals) {
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.normalsBuffer = gl.createBuffer();
+    /**
+     * @type {Number}
+     */
+    this.normalsBufferSize = normals.length/3;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Float32Array} uvs
+ */
+Rendering.Model.prototype.createUVsBuffer = function(gl, uvs) {
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.uvsBuffer = gl.createBuffer();
+    /**
+     * @type {Number}
+     */
+    this.uvsBufferSize = uvs.length/2;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {String} filename
+ */
+Rendering.Model.prototype.loadTexture = function(gl, filename) {
+    /**
+     * @type {WebGLTexture}
+     */
+    this.texture = gl.createTexture();
+    var img = new Image();
     var that = this;
-
-    this.createVerticesBuffer = function(gl, vertices) {
-        that.verticesBuffer = gl.createBuffer();
-        that.verticesBufferSize = vertices.length/3;
-        gl.bindBuffer(gl.ARRAY_BUFFER, that.verticesBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    img.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, that.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        that.textureLoaded = true;
     };
+    img.src = filename;
+};/**
+ * Created with JetBrains PhpStorm.
+ * User: fridek
+ * Date: 28.03.12
+ * Time: 23:39
+ * To change this template use File | Settings | File Templates.
+ */
 
-    this.createNormalsBuffer = function(gl, normals) {
-        that.normalsBuffer = gl.createBuffer();
-        that.normalsBufferSize = normals.length/3;
-        gl.bindBuffer(gl.ARRAY_BUFFER, that.normalsBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-    };
+goog.provide('Rendering.Demos_Interface');
 
-    this.createUVsBuffer = function(gl, uvs) {
-        that.uvsBuffer = gl.createBuffer();
-        that.uvsBufferSize = uvs.length/2;
-        gl.bindBuffer(gl.ARRAY_BUFFER, that.uvsBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
-    };
-
-    this.loadTexture = function(gl, filename) {
-        that.texture = gl.createTexture();
-        var img = new Image();
-        img.onload = function() {
-            gl.bindTexture(gl.TEXTURE_2D, that.texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-            gl.generateMipmap(gl.TEXTURE_2D);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            that.textureLoaded = true;
-        };
-        img.src = filename;
-    };
-};// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+/**
+ * Program is a set of compiled shaders
+ * @interface
+ */
+Rendering.Demos_Interface = function() {};
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Interface.prototype.run = function(gl) {};
+Rendering.Demos_Interface.prototype.stop = function() {};
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Interface.prototype.frame = function(gl) {};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15301,7 +17197,10 @@ goog.debug.entryPointRegistry.register(
 goog.require('goog.net.XhrIo');
 
 goog.provide("Rendering.Import.Element_Array");
-
+/**
+ *
+ * @constructor
+ */
 Rendering.Import.Element_Array = function() {
     this.load = function(verticesFile, facesFile, callback) {
         var oneCompleted = false;
@@ -15403,6 +17302,97 @@ Rendering.Import.Element_Array = function() {
 
     };
 };/**
+ * Created with JetBrains PhpStorm.
+ * User: fridek
+ * Date: 28.03.12
+ * Time: 23:35
+ * To change this template use File | Settings | File Templates.
+ */
+
+goog.provide('Rendering.Programs_Interface');
+
+/**
+ * Program is a set of compiled shaders
+ * @interface
+ */
+Rendering.Programs_Interface = function() {};
+
+Rendering.Programs_Interface.prototype.draw = function() {};
+/**
+ * Created by JetBrains PhpStorm.
+ * User: fridek
+ * Date: 10.03.12
+ * Time: 13:18
+ * To change this template use File | Settings | File Templates.
+ */
+
+goog.require("Rendering.Programs_Interface");
+goog.provide("Rendering.Programs_Basic");
+
+/**
+ * @constructor
+ * @implements {Rendering.Programs_Interface}
+ * @param {WebGLRenderingContext}
+*/
+Rendering.Programs_Basic = function(gl) {
+    var vshader = gl.createShader(goog.webgl.VERTEX_SHADER);
+    gl.shaderSource(vshader,'attribute vec3 aVertexPosition; uniform mat4 MVMatrix; void main(void) { gl_Position = MVMatrix * vec4(aVertexPosition, 1.0);}');
+    gl.compileShader(vshader);
+    if (!gl.getShaderParameter(vshader, goog.webgl.COMPILE_STATUS)) {
+        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
+    }
+
+
+    var fshader = gl.createShader(goog.webgl.FRAGMENT_SHADER);
+    gl.shaderSource(fshader, 'void main(void){gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);}');
+    gl.compileShader(fshader);
+    if (!gl.getShaderParameter(fshader, goog.webgl.COMPILE_STATUS)) {
+        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
+    }
+
+    var program = gl.createProgram();
+    gl.attachShader(program, fshader);
+    gl.attachShader(program, vshader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, goog.webgl.LINK_STATUS)){
+        alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
+        return;
+    }
+
+    // Validates and uses program in the GL context
+    gl.validateProgram(program);
+    if (!gl.getProgramParameter(program, goog.webgl.VALIDATE_STATUS)) {
+        alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
+        return;
+    }
+    /**
+     * @type {WebGLProgram}
+     */
+    this.program = program;
+    /**
+     * @type {Object.<WebGLUniformLocation>}
+     */
+    this.uniforms=  {
+            MVMatrix: gl.getUniformLocation(program, "MVMatrix")
+        };
+    /**
+     * @type {Object.<number>}
+     */
+    this.attribs = {
+            vertexPosition: gl.getAttribLocation(program, 'aVertexPosition')
+        };
+    gl.enableVertexAttribArray(this.attribs.vertexPosition);
+};
+
+/**
+ * @param {WebGLRenderingContext}
+ * @param {Rendering.Model}
+ */
+Rendering.Programs_Basic.prototype.draw = function(gl, model) {
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+};/**
  * Created by JetBrains PhpStorm.
  * User: fridek
  * Date: 09.03.12
@@ -15410,14 +17400,45 @@ Rendering.Import.Element_Array = function() {
  * To change this template use File | Settings | File Templates.
  */
 
-goog.provide("Rendering.Demos.Demo2");
+goog.provide("Rendering.Demos_Demo2");
+goog.require('Rendering.Demos_Interface');
+goog.require('Rendering.Programs_Basic');
 goog.require("Rendering.Import.Element_Array");
-
 goog.require('Rendering.Model');
 
-Rendering.Demos.Demo2.title = "Init canvas - Dragon";
 
-Rendering.Demos.Demo2.run = function(gl) {
+/**
+ * @constructor
+ * @implements {Rendering.Demos_Interface}
+ * @param {WebGLRenderingContext}
+*/
+Rendering.Demos_Demo2 = function(gl) {
+    /**
+     * @type {Rendering.Programs_Interface}
+     */
+    this.program = new Rendering.Programs_Basic(gl);
+
+    /**     * @type {number}
+     */
+    this.rotX = 30;
+    /**     * @type {number}
+     */
+    this.rotY = 30;
+    /**     * @type {number}
+     */
+    this.rotZ = 0;
+    /**     * @type {Rendering.Model?}
+     */
+    this.model = null;
+};
+
+/** * @const
+ * @type {string}
+ */
+Rendering.Demos_Demo2.prototype.title = "Init canvas - Dragon";
+/** * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo2.prototype.run = function(gl) {
     console.log("run demo 2");
 
     var that = this;
@@ -15432,30 +17453,31 @@ Rendering.Demos.Demo2.run = function(gl) {
         }
     );
 
-    gl.useProgram(Rendering.Programs.Basic.program);
+    gl.useProgram(this.program.program);
 };
 
-Rendering.Demos.Demo2.stop = function() {
+Rendering.Demos_Demo2.prototype.stop = function() {
     console.log("stop demo 2");
 
     delete this.model;
+    delete this.program;
 };
-
-var rotX = 30, rotY = 30, rotZ = 0;
-Rendering.Demos.Demo2.frame = function(gl) {
+/** * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo2.prototype.frame = function(gl) {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    rotY++;
-    if(rotY > 360) rotY -= 360;
+    this.rotY++;
+    if(this.rotY > 360) this.rotY -= 360;
 
     var modelView = mat4.create();
     mat4.identity(modelView);
-    mat4.rotate(modelView, rotY/180*Math.PI, [0, 1, 0]);
+    mat4.rotate(modelView, this.rotY/180*Math.PI, [0, 1, 0]);
     mat4.rotate(modelView, -Math.PI/2, [1, 0, 0]);
     mat4.scale(modelView, [0.1, 0.1, 0.1]);
-    gl.uniformMatrix4fv(Rendering.Programs.Basic.uniforms.MVMatrix, false, modelView);
+    gl.uniformMatrix4fv(this.program.uniforms.MVMatrix, false, modelView);
 
-    if(this.model) Rendering.Programs.Basic.draw(gl, this.model);
+    if(this.model) this.program.draw(gl, this.model);
     gl.flush();
 };/**
  * Created by JetBrains PhpStorm.
@@ -15464,145 +17486,16 @@ Rendering.Demos.Demo2.frame = function(gl) {
  * Time: 13:18
  * To change this template use File | Settings | File Templates.
  */
+goog.require("Rendering.Programs_Interface");
+goog.provide("Rendering.Programs_Light_Texture");
 
-goog.provide("Rendering.Programs.Normal2Color");
-
-Rendering.Programs.Normal2Color.init = function(gl) {
-    var vshader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vshader,[
-        'attribute vec3 aVertexPosition;',
-        'attribute vec3 normalPosition;',
-
-        'varying mediump vec4 vVaryingColor;',
-        'uniform mat4 MVMatrix;',
-
-        'void main(void)',
-        '{',
-            'vVaryingColor = vec4(normalPosition, 1.0);',
-            'gl_Position = MVMatrix * vec4(aVertexPosition, 1.0);',
-        '}'].join("\n")
-    );
-    gl.compileShader(vshader);
-    if (!gl.getShaderParameter(vshader, gl.COMPILE_STATUS)) {
-        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
-    }
-
-
-    var fshader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fshader, [
-        'varying mediump vec4 vVaryingColor;',
-        'void main(void)',
-        '{',
-            'gl_FragColor = vVaryingColor;',
-        '}'].join("\n"));
-    gl.compileShader(fshader);
-    if (!gl.getShaderParameter(fshader, gl.COMPILE_STATUS)) {
-        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
-    }
-
-    var program = gl.createProgram();
-    gl.attachShader(program, fshader);
-    gl.attachShader(program, vshader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
-        alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
-        return;
-    }
-
-    // Validates and uses program in the GL context
-    gl.validateProgram(program);
-    if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-        alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
-        return;
-    }
-
-    this.program = program;
-    this.uniforms=  {
-            MVMatrix: gl.getUniformLocation(program, "MVMatrix")
-        };
-    this.attribs = {
-            vertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
-            normalPosition: gl.getAttribLocation(program, 'normalPosition')
-        };
-    gl.enableVertexAttribArray(this.attribs.vertexPosition);
-    gl.enableVertexAttribArray(this.attribs.normalPosition);
-};
-
-Rendering.Programs.Normal2Color.draw = function(gl, model) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.verticesBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Normal2Color.attribs.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.normalsBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Normal2Color.attribs.normalPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, model.verticesBufferSize);
-};/**
- * Created by JetBrains PhpStorm.
- * User: fridek
- * Date: 09.03.12
- * Time: 23:01
- * To change this template use File | Settings | File Templates.
- */
-
-goog.provide("Rendering.Demos.Demo3");
-goog.require("Rendering.Import.Element_Array");
-goog.require("Rendering.Programs.Texture");
-goog.require('Rendering.Model');
-
-Rendering.Demos.Demo3.title = "Textured T-Rex";
-
-Rendering.Demos.Demo3.run = function(gl) {
-    console.log("run demo 3");
-
-    var that = this;
-    var parser = new Rendering.Import.Element_Array();
-    parser.load('assets/tyrannosaurus_rex/tyrannosaurus_rex_vertices.dat',
-        'assets/tyrannosaurus_rex/tyrannosaurus_rex_faces.dat',
-        function(vertices, normals, uvs) {
-            that.model = new Rendering.Model();
-            that.model.createVerticesBuffer(gl, vertices);
-            if(normals) that.model.createNormalsBuffer(gl, normals);
-            if(uvs) that.model.createUVsBuffer(gl, uvs);
-
-            that.model.loadTexture(gl, 'assets/tyrannosaurus_rex/tyrannosaurus_rex_diffuse.png');
-        }
-    );
-
-    gl.useProgram(Rendering.Programs.Texture.program);
-};
-
-Rendering.Demos.Demo3.stop = function() {
-    console.log("stop demo 3");
-
-    delete this.model;
-};
-
-var rotX = 30, rotY = 30, rotZ = 0;
-Rendering.Demos.Demo3.frame = function(gl) {
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    rotY++;
-    if(rotY > 360) rotY -= 360;
-
-    var modelView = mat4.create();
-    mat4.identity(modelView);
-    mat4.rotate(modelView, rotY/180*Math.PI, [0, 1, 0]);
-    mat4.rotate(modelView, -Math.PI/2, [1, 0, 0]);
-    mat4.scale(modelView, [0.1, 0.1, 0.1]);
-    gl.uniformMatrix4fv(Rendering.Programs.Texture.uniforms.MVMatrix, false, modelView);
-
-    if(this.model && this.model.textureLoaded) Rendering.Programs.Texture.draw(gl, this.model);
-    gl.flush();
-};/**
- * Created by JetBrains PhpStorm.
- * User: fridek
- * Date: 10.03.12
- * Time: 13:18
- * To change this template use File | Settings | File Templates.
- */
-
-goog.provide("Rendering.Programs.Light_Texture");
-
-Rendering.Programs.Light_Texture.init = function(gl) {
-    var vshader = gl.createShader(gl.VERTEX_SHADER);
+/**
+ * @constructor
+ * @implements {Rendering.Programs_Interface}
+ * @param {WebGLRenderingContext}
+*/
+Rendering.Programs_Light_Texture = function(gl) {
+    var vshader = gl.createShader(goog.webgl.VERTEX_SHADER);
     gl.shaderSource(vshader,[
         'attribute vec3 vertexPosition;',
         'attribute vec3 vertexNormal;',
@@ -15627,12 +17520,12 @@ Rendering.Programs.Light_Texture.init = function(gl) {
     '}'].join("\n")
     );
     gl.compileShader(vshader);
-    if (!gl.getShaderParameter(vshader, gl.COMPILE_STATUS)) {
+    if (!gl.getShaderParameter(vshader, goog.webgl.COMPILE_STATUS)) {
         alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
     }
 
 
-    var fshader = gl.createShader(gl.FRAGMENT_SHADER);
+    var fshader = gl.createShader(goog.webgl.FRAGMENT_SHADER);
     gl.shaderSource(fshader, [
         'varying highp vec2 texture_coordinates;',
         'varying highp vec3 vLighting;',
@@ -15644,7 +17537,7 @@ Rendering.Programs.Light_Texture.init = function(gl) {
             'gl_FragColor = vec4(texelColor.rgb * vLighting, texelColor.a);',
         '}'].join("\n"));
     gl.compileShader(fshader);
-    if (!gl.getShaderParameter(fshader, gl.COMPILE_STATUS)) {
+    if (!gl.getShaderParameter(fshader, goog.webgl.COMPILE_STATUS)) {
         alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
     }
 
@@ -15652,24 +17545,32 @@ Rendering.Programs.Light_Texture.init = function(gl) {
     gl.attachShader(program, fshader);
     gl.attachShader(program, vshader);
     gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
+    if (!gl.getProgramParameter(program, goog.webgl.LINK_STATUS)){
         alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
         return;
     }
 
     // Validates and uses program in the GL context
     gl.validateProgram(program);
-    if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+    if (!gl.getProgramParameter(program, goog.webgl.VALIDATE_STATUS)) {
         alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
         return;
     }
-
+    /**
+     * @type {WebGLProgram}
+     */
     this.program = program;
+    /**
+     * @type {Object.<WebGLUniformLocation>}
+     */
     this.uniforms=  {
             MVMatrix: gl.getUniformLocation(program, "MVMatrix"),
             Light: gl.getUniformLocation(program, "Light"),
             texture_unit: gl.getUniformLocation(program, "texture_unit")
         };
+    /**
+     * @type {Object.<number>}
+     */
     this.attribs = {
             vertexPosition: gl.getAttribLocation(program, 'vertexPosition'),
             vertexNormal: gl.getAttribLocation(program, 'vertexNormal'),
@@ -15679,19 +17580,2392 @@ Rendering.Programs.Light_Texture.init = function(gl) {
     gl.enableVertexAttribArray(this.attribs.vertexNormal);
     gl.enableVertexAttribArray(this.attribs.vertexTextureCoords);
 };
+/** * @param {WebGLRenderingContext}
+ * @param {Rendering.Model}
+ */
+Rendering.Programs_Light_Texture.prototype.draw = function(gl, model) {
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexNormal, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.uvsBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexTextureCoords, 2, goog.webgl.FLOAT, false, 0, 0);
 
-Rendering.Programs.Light_Texture.draw = function(gl, model) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.verticesBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Light_Texture.attribs.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.normalsBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Light_Texture.attribs.vertexNormal, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.uvsBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Light_Texture.attribs.vertexTextureCoords, 2, gl.FLOAT, false, 0, 0);
+    gl.activeTexture(goog.webgl.TEXTURE0);
+    gl.bindTexture(goog.webgl.TEXTURE_2D, model.texture);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, model.texture);
+    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+};// Copyright 2011 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-    gl.drawArrays(gl.TRIANGLES, 0, model.verticesBufferSize);
+
+/**
+ * @fileoverview Constants used by the WebGL rendering, including all of the
+ * constants used from the WebGL context.  For example, instead of using
+ * context.ARRAY_BUFFER, your code can use
+ * goog.webgl.ARRAY_BUFFER. The benefits for doing this include allowing
+ * the compiler to optimize your code so that the compiled code does not have to
+ * contain large strings to reference these properties, and reducing runtime
+ * property access.
+ *
+ * Values are taken from the WebGL Spec:
+ * https://www.khronos.org/registry/webgl/specs/1.0/#WEBGLRENDERINGCONTEXT
+ */
+
+goog.provide('goog.webgl');
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_BUFFER_BIT = 0x00000100;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BUFFER_BIT = 0x00000400;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.COLOR_BUFFER_BIT = 0x00004000;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.POINTS = 0x0000;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINES = 0x0001;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINE_LOOP = 0x0002;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINE_STRIP = 0x0003;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TRIANGLES = 0x0004;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TRIANGLE_STRIP = 0x0005;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TRIANGLE_FAN = 0x0006;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ZERO = 0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE = 1;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SRC_COLOR = 0x0300;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE_MINUS_SRC_COLOR = 0x0301;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SRC_ALPHA = 0x0302;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE_MINUS_SRC_ALPHA = 0x0303;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DST_ALPHA = 0x0304;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE_MINUS_DST_ALPHA = 0x0305;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DST_COLOR = 0x0306;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE_MINUS_DST_COLOR = 0x0307;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SRC_ALPHA_SATURATE = 0x0308;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FUNC_ADD = 0x8006;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_EQUATION = 0x8009;
+
+
+/**
+ * Same as BLEND_EQUATION
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_EQUATION_RGB = 0x8009;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_EQUATION_ALPHA = 0x883D;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FUNC_SUBTRACT = 0x800A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FUNC_REVERSE_SUBTRACT = 0x800B;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_DST_RGB = 0x80C8;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_SRC_RGB = 0x80C9;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_DST_ALPHA = 0x80CA;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_SRC_ALPHA = 0x80CB;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CONSTANT_COLOR = 0x8001;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE_MINUS_CONSTANT_COLOR = 0x8002;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CONSTANT_ALPHA = 0x8003;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ONE_MINUS_CONSTANT_ALPHA = 0x8004;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND_COLOR = 0x8005;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ARRAY_BUFFER = 0x8892;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ELEMENT_ARRAY_BUFFER = 0x8893;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ARRAY_BUFFER_BINDING = 0x8894;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ELEMENT_ARRAY_BUFFER_BINDING = 0x8895;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STREAM_DRAW = 0x88E0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STATIC_DRAW = 0x88E4;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DYNAMIC_DRAW = 0x88E8;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BUFFER_SIZE = 0x8764;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BUFFER_USAGE = 0x8765;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CURRENT_VERTEX_ATTRIB = 0x8626;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRONT = 0x0404;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BACK = 0x0405;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRONT_AND_BACK = 0x0408;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CULL_FACE = 0x0B44;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLEND = 0x0BE2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DITHER = 0x0BD0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_TEST = 0x0B90;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_TEST = 0x0B71;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SCISSOR_TEST = 0x0C11;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.POLYGON_OFFSET_FILL = 0x8037;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLE_ALPHA_TO_COVERAGE = 0x809E;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLE_COVERAGE = 0x80A0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NO_ERROR = 0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INVALID_ENUM = 0x0500;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INVALID_VALUE = 0x0501;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INVALID_OPERATION = 0x0502;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.OUT_OF_MEMORY = 0x0505;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CW = 0x0900;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CCW = 0x0901;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINE_WIDTH = 0x0B21;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ALIASED_POINT_SIZE_RANGE = 0x846D;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ALIASED_LINE_WIDTH_RANGE = 0x846E;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CULL_FACE_MODE = 0x0B45;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRONT_FACE = 0x0B46;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_RANGE = 0x0B70;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_WRITEMASK = 0x0B72;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_CLEAR_VALUE = 0x0B73;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_FUNC = 0x0B74;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_CLEAR_VALUE = 0x0B91;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_FUNC = 0x0B92;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_FAIL = 0x0B94;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_PASS_DEPTH_FAIL = 0x0B95;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_PASS_DEPTH_PASS = 0x0B96;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_REF = 0x0B97;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_VALUE_MASK = 0x0B93;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_WRITEMASK = 0x0B98;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_FUNC = 0x8800;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_FAIL = 0x8801;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_PASS_DEPTH_FAIL = 0x8802;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_PASS_DEPTH_PASS = 0x8803;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_REF = 0x8CA3;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_VALUE_MASK = 0x8CA4;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BACK_WRITEMASK = 0x8CA5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VIEWPORT = 0x0BA2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SCISSOR_BOX = 0x0C10;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.COLOR_CLEAR_VALUE = 0x0C22;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.COLOR_WRITEMASK = 0x0C23;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNPACK_ALIGNMENT = 0x0CF5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.PACK_ALIGNMENT = 0x0D05;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_TEXTURE_SIZE = 0x0D33;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_VIEWPORT_DIMS = 0x0D3A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SUBPIXEL_BITS = 0x0D50;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RED_BITS = 0x0D52;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.GREEN_BITS = 0x0D53;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BLUE_BITS = 0x0D54;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ALPHA_BITS = 0x0D55;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_BITS = 0x0D56;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_BITS = 0x0D57;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.POLYGON_OFFSET_UNITS = 0x2A00;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.POLYGON_OFFSET_FACTOR = 0x8038;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_BINDING_2D = 0x8069;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLE_BUFFERS = 0x80A8;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLES = 0x80A9;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLE_COVERAGE_VALUE = 0x80AA;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLE_COVERAGE_INVERT = 0x80AB;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NUM_COMPRESSED_TEXTURE_FORMATS = 0x86A2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.COMPRESSED_TEXTURE_FORMATS = 0x86A3;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DONT_CARE = 0x1100;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FASTEST = 0x1101;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NICEST = 0x1102;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.GENERATE_MIPMAP_HINT = 0x8192;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BYTE = 0x1400;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNSIGNED_BYTE = 0x1401;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SHORT = 0x1402;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNSIGNED_SHORT = 0x1403;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INT = 0x1404;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNSIGNED_INT = 0x1405;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT = 0x1406;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_COMPONENT = 0x1902;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ALPHA = 0x1906;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RGB = 0x1907;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RGBA = 0x1908;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LUMINANCE = 0x1909;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LUMINANCE_ALPHA = 0x190A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNSIGNED_SHORT_4_4_4_4 = 0x8033;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNSIGNED_SHORT_5_5_5_1 = 0x8034;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNSIGNED_SHORT_5_6_5 = 0x8363;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAGMENT_SHADER = 0x8B30;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_SHADER = 0x8B31;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_VERTEX_ATTRIBS = 0x8869;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_VERTEX_UNIFORM_VECTORS = 0x8DFB;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_VARYING_VECTORS = 0x8DFC;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_COMBINED_TEXTURE_IMAGE_UNITS = 0x8B4D;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_VERTEX_TEXTURE_IMAGE_UNITS = 0x8B4C;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_TEXTURE_IMAGE_UNITS = 0x8872;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_FRAGMENT_UNIFORM_VECTORS = 0x8DFD;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SHADER_TYPE = 0x8B4F;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DELETE_STATUS = 0x8B80;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINK_STATUS = 0x8B82;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VALIDATE_STATUS = 0x8B83;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ATTACHED_SHADERS = 0x8B85;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ACTIVE_UNIFORMS = 0x8B86;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ACTIVE_ATTRIBUTES = 0x8B89;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SHADING_LANGUAGE_VERSION = 0x8B8C;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CURRENT_PROGRAM = 0x8B8D;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NEVER = 0x0200;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LESS = 0x0201;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.EQUAL = 0x0202;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LEQUAL = 0x0203;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.GREATER = 0x0204;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NOTEQUAL = 0x0205;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.GEQUAL = 0x0206;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ALWAYS = 0x0207;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.KEEP = 0x1E00;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.REPLACE = 0x1E01;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INCR = 0x1E02;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DECR = 0x1E03;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INVERT = 0x150A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INCR_WRAP = 0x8507;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DECR_WRAP = 0x8508;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VENDOR = 0x1F00;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERER = 0x1F01;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERSION = 0x1F02;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NEAREST = 0x2600;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINEAR = 0x2601;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NEAREST_MIPMAP_NEAREST = 0x2700;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINEAR_MIPMAP_NEAREST = 0x2701;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NEAREST_MIPMAP_LINEAR = 0x2702;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LINEAR_MIPMAP_LINEAR = 0x2703;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_MAG_FILTER = 0x2800;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_MIN_FILTER = 0x2801;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_WRAP_S = 0x2802;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_WRAP_T = 0x2803;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_2D = 0x0DE1;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE = 0x1702;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP = 0x8513;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_BINDING_CUBE_MAP = 0x8514;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP_NEGATIVE_X = 0x8516;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP_POSITIVE_Y = 0x8517;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP_NEGATIVE_Y = 0x8518;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP_POSITIVE_Z = 0x8519;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE_CUBE_MAP_NEGATIVE_Z = 0x851A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_CUBE_MAP_TEXTURE_SIZE = 0x851C;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE0 = 0x84C0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE1 = 0x84C1;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE2 = 0x84C2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE3 = 0x84C3;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE4 = 0x84C4;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE5 = 0x84C5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE6 = 0x84C6;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE7 = 0x84C7;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE8 = 0x84C8;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE9 = 0x84C9;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE10 = 0x84CA;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE11 = 0x84CB;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE12 = 0x84CC;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE13 = 0x84CD;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE14 = 0x84CE;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE15 = 0x84CF;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE16 = 0x84D0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE17 = 0x84D1;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE18 = 0x84D2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE19 = 0x84D3;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE20 = 0x84D4;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE21 = 0x84D5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE22 = 0x84D6;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE23 = 0x84D7;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE24 = 0x84D8;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE25 = 0x84D9;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE26 = 0x84DA;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE27 = 0x84DB;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE28 = 0x84DC;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE29 = 0x84DD;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE30 = 0x84DE;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.TEXTURE31 = 0x84DF;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.ACTIVE_TEXTURE = 0x84E0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.REPEAT = 0x2901;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CLAMP_TO_EDGE = 0x812F;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MIRRORED_REPEAT = 0x8370;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT_VEC2 = 0x8B50;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT_VEC3 = 0x8B51;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT_VEC4 = 0x8B52;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INT_VEC2 = 0x8B53;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INT_VEC3 = 0x8B54;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INT_VEC4 = 0x8B55;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BOOL = 0x8B56;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BOOL_VEC2 = 0x8B57;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BOOL_VEC3 = 0x8B58;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BOOL_VEC4 = 0x8B59;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT_MAT2 = 0x8B5A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT_MAT3 = 0x8B5B;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FLOAT_MAT4 = 0x8B5C;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLER_2D = 0x8B5E;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.SAMPLER_CUBE = 0x8B60;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_ENABLED = 0x8622;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_SIZE = 0x8623;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_STRIDE = 0x8624;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_TYPE = 0x8625;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_NORMALIZED = 0x886A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_POINTER = 0x8645;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING = 0x889F;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.COMPILE_STATUS = 0x8B81;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LOW_FLOAT = 0x8DF0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MEDIUM_FLOAT = 0x8DF1;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.HIGH_FLOAT = 0x8DF2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.LOW_INT = 0x8DF3;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MEDIUM_INT = 0x8DF4;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.HIGH_INT = 0x8DF5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER = 0x8D40;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER = 0x8D41;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RGBA4 = 0x8056;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RGB5_A1 = 0x8057;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RGB565 = 0x8D62;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_COMPONENT16 = 0x81A5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_INDEX = 0x1901;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_INDEX8 = 0x8D48;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_STENCIL = 0x84F9;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_WIDTH = 0x8D42;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_HEIGHT = 0x8D43;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_INTERNAL_FORMAT = 0x8D44;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_RED_SIZE = 0x8D50;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_GREEN_SIZE = 0x8D51;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_BLUE_SIZE = 0x8D52;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_ALPHA_SIZE = 0x8D53;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_DEPTH_SIZE = 0x8D54;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_STENCIL_SIZE = 0x8D55;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE = 0x8CD0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME = 0x8CD1;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL = 0x8CD2;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE = 0x8CD3;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.COLOR_ATTACHMENT0 = 0x8CE0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_ATTACHMENT = 0x8D00;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.STENCIL_ATTACHMENT = 0x8D20;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.DEPTH_STENCIL_ATTACHMENT = 0x821A;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.NONE = 0;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_COMPLETE = 0x8CD5;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT = 0x8CD6;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT = 0x8CD7;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS = 0x8CD9;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_UNSUPPORTED = 0x8CDD;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAMEBUFFER_BINDING = 0x8CA6;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.RENDERBUFFER_BINDING = 0x8CA7;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.MAX_RENDERBUFFER_SIZE = 0x84E8;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.INVALID_FRAMEBUFFER_OPERATION = 0x0506;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNPACK_FLIP_Y_WEBGL = 0x9240;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.CONTEXT_LOST_WEBGL = 0x9242;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNPACK_COLORSPACE_CONVERSION_WEBGL = 0x9243;
+
+
+/**
+ * @const
+ * @type {number}
+ */
+goog.webgl.BROWSER_DEFAULT_WEBGL = 0x9244;
+
+
+/**
+ * From the OES_texture_half_float extension.
+ * http://www.khronos.org/registry/webgl/extensions/OES_texture_half_float/
+ * @const
+ * @type {number}
+ */
+goog.webgl.HALF_FLOAT_OES = 0x8D61;
+
+
+/**
+ * From the OES_standard_derivatives extension.
+ * http://www.khronos.org/registry/webgl/extensions/OES_standard_derivatives/
+ * @const
+ * @type {number}
+ */
+goog.webgl.FRAGMENT_SHADER_DERIVATIVE_HINT_OES = 0x8B8B;
+
+
+/**
+ * From the OES_vertex_array_object extension.
+ * http://www.khronos.org/registry/webgl/extensions/OES_vertex_array_object/
+ * @const
+ * @type {number}
+ */
+goog.webgl.VERTEX_ARRAY_BINDING_OES = 0x85B5;
+
+
+/**
+ * From the WEBGL_debug_renderer_info extension.
+ * http://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNMASKED_VENDOR_WEBGL = 0x9245;
+
+
+/**
+ * From the WEBGL_debug_renderer_info extension.
+ * http://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @const
+ * @type {number}
+ */
+goog.webgl.UNMASKED_RENDERER_WEBGL = 0x9246;
+
+
+/**
+ * From the WEBGL_compressed_texture_s3tc extension.
+ * http://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_s3tc/
+ * @const
+ * @type {number}
+ */
+goog.webgl.COMPRESSED_RGB_S3TC_DXT1_EXT = 0x83F0;
+
+
+/**
+ * From the WEBGL_compressed_texture_s3tc extension.
+ * http://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_s3tc/
+ * @const
+ * @type {number}
+ */
+goog.webgl.COMPRESSED_RGBA_S3TC_DXT1_EXT = 0x83F1;
+
+
+/**
+ * From the WEBGL_compressed_texture_s3tc extension.
+ * http://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_s3tc/
+ * @const
+ * @type {number}
+ */
+goog.webgl.COMPRESSED_RGBA_S3TC_DXT3_EXT = 0x83F2;
+
+
+/**
+ * From the WEBGL_compressed_texture_s3tc extension.
+ * http://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_s3tc/
+ * @const
+ * @type {number}
+ */
+goog.webgl.COMPRESSED_RGBA_S3TC_DXT5_EXT = 0x83F3;
+/**
+ * Created by JetBrains PhpStorm.
+ * User: fridek
+ * Date: 10.03.12
+ * Time: 13:18
+ * To change this template use File | Settings | File Templates.
+ */
+
+goog.require("Rendering.Programs_Interface");
+goog.provide("Rendering.Programs_Normal2Color");
+
+/**
+ * @constructor
+ * @implements {Rendering.Programs_Interface}
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Programs_Normal2Color = function(gl) {
+    var vshader = gl.createShader(goog.webgl.VERTEX_SHADER);
+    gl.shaderSource(vshader,[
+        'attribute vec3 aVertexPosition;',
+        'attribute vec3 normalPosition;',
+
+        'varying mediump vec4 vVaryingColor;',
+        'uniform mat4 MVMatrix;',
+
+        'void main(void)',
+        '{',
+            'vVaryingColor = vec4(normalPosition, 1.0);',
+            'gl_Position = MVMatrix * vec4(aVertexPosition, 1.0);',
+        '}'].join("\n")
+    );
+    gl.compileShader(vshader);
+    if (!gl.getShaderParameter(vshader, goog.webgl.COMPILE_STATUS)) {
+        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
+    }
+
+
+    var fshader = gl.createShader(goog.webgl.FRAGMENT_SHADER);
+    gl.shaderSource(fshader, [
+        'varying mediump vec4 vVaryingColor;',
+        'void main(void)',
+        '{',
+            'gl_FragColor = vVaryingColor;',
+        '}'].join("\n"));
+    gl.compileShader(fshader);
+    if (!gl.getShaderParameter(fshader, goog.webgl.COMPILE_STATUS)) {
+        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
+    }
+
+    var program = gl.createProgram();
+    gl.attachShader(program, fshader);
+    gl.attachShader(program, vshader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, goog.webgl.LINK_STATUS)){
+        alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
+        return;
+    }
+
+    // Validates and uses program in the GL context
+    gl.validateProgram(program);
+    if (!gl.getProgramParameter(program, goog.webgl.VALIDATE_STATUS)) {
+        alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
+        return;
+    }
+    /**
+     * @type {WebGLProgram}
+     */
+    this.program = program;
+    /**
+     * @type {Object.<WebGLUniformLocation>}
+     */
+    this.uniforms=  {
+            MVMatrix: gl.getUniformLocation(program, "MVMatrix")
+        };
+    /**
+     * @type {Object.<number>}
+     */
+    this.attribs = {
+            vertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
+            normalPosition: gl.getAttribLocation(program, 'normalPosition')
+        };
+    gl.enableVertexAttribArray(this.attribs.vertexPosition);
+    gl.enableVertexAttribArray(this.attribs.normalPosition);
+};
+/**
+ * @param {WebGLRenderingContext}
+ * @param {Rendering.Model}
+ */
+Rendering.Programs_Normal2Color.prototype.draw = function(gl, model) {
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
+    gl.vertexAttribPointer(this.attribs.normalPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+};/**
+ * Created by JetBrains PhpStorm.
+ * User: fridek
+ * Date: 09.03.12
+ * Time: 23:01
+ * To change this template use File | Settings | File Templates.
+ */
+
+goog.provide("Rendering.Demos_Demo1");
+goog.require('Rendering.Demos_Interface');
+
+goog.require("Rendering.Import.Element_Array");
+goog.require("Rendering.Programs_Normal2Color");
+goog.require('Rendering.Model');
+
+/**
+ * @constructor
+ * @implements {Rendering.Demos_Interface}
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo1 = function(gl) {
+    /**
+     * @type {Rendering.Programs_Interface}
+     */
+    this.program = new Rendering.Programs_Normal2Color(gl);
+
+    /**
+    * @type {number}
+     */
+    this.rotX = 30;
+    /**
+     * @type {number}
+     */
+    this.rotY = 30;
+    /**
+     * @type {number}
+     */
+    this.rotZ = 0;
+    /**
+    * @type {?Rendering.Model}
+     */
+    this.model = null;
+};
+
+/**
+ * @const
+ * @type {string}
+ */
+Rendering.Demos_Demo1.prototype.title = "Normal2color T-Rex";
+
+/**
+* @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo1.prototype.run = function(gl) {
+    console.log("run demo 1");
+
+    var that = this;
+    var parser = new Rendering.Import.Element_Array();
+    parser.load('assets/tyrannosaurus_rex/tyrannosaurus_rex_vertices.dat',
+        'assets/tyrannosaurus_rex/tyrannosaurus_rex_faces.dat',
+        function(vertices, normals, uvs) {
+            that.model = new Rendering.Model();
+            that.model.createVerticesBuffer(gl, vertices);
+            if(normals) that.model.createNormalsBuffer(gl, normals);
+            if(uvs) that.model.createUVsBuffer(gl, uvs);
+        }
+    );
+
+    gl.useProgram(this.program.program);
+};
+
+Rendering.Demos_Demo1.prototype.stop = function() {
+    console.log("stop demo 1");
+    delete this.program;
+    delete this.model;
+};
+
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo1.prototype.frame = function(gl) {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    this.rotY++;
+    if(this.rotY > 360) this.rotY -= 360;
+
+    var modelView = mat4.create();
+    mat4.identity(modelView);
+    mat4.rotate(modelView, this.rotY/180*Math.PI, [0, 1, 0]);
+    mat4.rotate(modelView, -Math.PI/2, [1, 0, 0]);
+    mat4.scale(modelView, [0.1, 0.1, 0.1]);
+    gl.uniformMatrix4fv(this.program.uniforms.MVMatrix, false, modelView);
+    if(this.model) this.program.draw(gl, this.model);
+    gl.flush();
 };// stats.js r8 - http://github.com/mrdoob/stats.js
 goog.provide("Rendering.Stats");
 
@@ -15705,20 +19979,159 @@ a.style.width="1px",a.style.height=Math.random()*30+"px",a.style.cssFloat="left"
 /**
  * Created by JetBrains PhpStorm.
  * User: fridek
+ * Date: 10.03.12
+ * Time: 13:18
+ * To change this template use File | Settings | File Templates.
+ */
+goog.require("Rendering.Programs_Interface");
+goog.provide("Rendering.Programs_Texture");
+
+/**
+ * @constructor
+ * @implements {Rendering.Programs_Interface}
+ * @param {WebGLRenderingContext}
+*/
+Rendering.Programs_Texture = function(gl) {
+    var vshader = gl.createShader(goog.webgl.VERTEX_SHADER);
+    gl.shaderSource(vshader,[
+        'attribute vec3 vertexPosition;',
+        'attribute vec3 vertexNormal;',
+        'attribute vec2 vertexTextureCoords;',
+
+        'varying mediump vec2 texture_coordinates;',
+
+        'uniform mat4 MVMatrix;',
+
+        'void main(void)',
+        '{',
+            'texture_coordinates = vertexTextureCoords;',
+            'gl_Position = MVMatrix * vec4(vertexPosition, 1.0);',
+        '}'].join("\n")
+    );
+    gl.compileShader(vshader);
+    if (!gl.getShaderParameter(vshader, goog.webgl.COMPILE_STATUS)) {
+        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
+    }
+
+
+    var fshader = gl.createShader(goog.webgl.FRAGMENT_SHADER);
+    gl.shaderSource(fshader, [
+        'varying mediump vec2 texture_coordinates;',
+        'uniform sampler2D texture_unit;',
+
+        'void main(void)',
+        '{',
+            'gl_FragColor = texture2D(texture_unit, vec2(texture_coordinates.s, texture_coordinates.t));',
+        '}'].join("\n"));
+    gl.compileShader(fshader);
+    if (!gl.getShaderParameter(fshader, goog.webgl.COMPILE_STATUS)) {
+        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
+    }
+
+    var program = gl.createProgram();
+    gl.attachShader(program, fshader);
+    gl.attachShader(program, vshader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, goog.webgl.LINK_STATUS)){
+        alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
+        return;
+    }
+
+    // Validates and uses program in the GL context
+    gl.validateProgram(program);
+    if (!gl.getProgramParameter(program, goog.webgl.VALIDATE_STATUS)) {
+        alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
+        return;
+    }
+    /**
+     * @type {WebGLProgram}
+     */
+    this.program = program;
+    /**
+     * @type {Object.<WebGLUniformLocation>}
+     */
+    this.uniforms=  {
+            MVMatrix: gl.getUniformLocation(program, "MVMatrix"),
+            texture_unit: gl.getUniformLocation(program, "texture_unit")
+        };
+    /**
+     * @type {Object.<number>}
+     */
+    this.attribs = {
+            vertexPosition: gl.getAttribLocation(program, 'vertexPosition'),
+            vertexNormal: gl.getAttribLocation(program, 'vertexNormal'),
+            vertexTextureCoords: gl.getAttribLocation(program, 'vertexTextureCoords')
+        };
+    gl.enableVertexAttribArray(this.attribs.vertexPosition);
+    gl.enableVertexAttribArray(this.attribs.vertexNormal);
+    gl.enableVertexAttribArray(this.attribs.vertexTextureCoords);
+};
+/**
+ * @param {WebGLRenderingContext}
+ * @param {Rendering.Model}
+ */
+Rendering.Programs_Texture.prototype.draw = function(gl, model) {
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexNormal, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.uvsBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexTextureCoords, 2, goog.webgl.FLOAT, false, 0, 0);
+
+    gl.activeTexture(goog.webgl.TEXTURE0);
+    gl.bindTexture(goog.webgl.TEXTURE_2D, model.texture);
+    gl.uniform1i(this.uniforms.texture_unit, 0);
+
+    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+};/**
+ * Created by JetBrains PhpStorm.
+ * User: fridek
  * Date: 09.03.12
  * Time: 23:01
  * To change this template use File | Settings | File Templates.
  */
 
-goog.provide("Rendering.Demos.Demo4");
+goog.provide("Rendering.Demos_Demo3");
+goog.require('Rendering.Demos_Interface');
 goog.require("Rendering.Import.Element_Array");
-goog.require("Rendering.Programs.Light_Texture");
+goog.require("Rendering.Programs_Texture");
 goog.require('Rendering.Model');
 
-Rendering.Demos.Demo4.title = "Lights & Textured T-Rex";
+/**
+ * @constructor
+ * @implements {Rendering.Demos_Interface}
+ * @param {WebGLRenderingContext}
+*/
+Rendering.Demos_Demo3 = function(gl) {
+    /*
+     * @type {Rendering.Programs_Interface}
+     */
+    this.program = new Rendering.Programs_Texture(gl);
 
-Rendering.Demos.Demo4.run = function(gl) {
-    console.log("run demo 4");
+    /*
+     * @type {number}
+     */
+    this.rotX = 30;
+    /*
+     * @type {number}
+     */
+    this.rotY = 30;
+    /*
+     * @type {number}
+     */
+    this.rotZ = 0;
+    /*
+     * @type {Rendering.Model?}
+     */
+    this.model = null;
+};
+
+Rendering.Demos_Demo3.prototype.title = "Textured T-Rex";
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo3.prototype.run = function(gl) {
+    console.log("run demo 3");
 
     var that = this;
     var parser = new Rendering.Import.Element_Array();
@@ -15734,70 +20147,31 @@ Rendering.Demos.Demo4.run = function(gl) {
         }
     );
 
-    that.light = new Rendering.Model();
-    var vertices = [];
-    var _vertices = [
-        0.0, -1.0,  0.0,
-        1.0,  0.0,  0.0,
-        0.0,  0.0,  1.0,
-        -1.0,  0.0,  0.0,
-        0.0,  0.0, -1.0,
-        0.0,  1.0,  0.0
-    ];
-    var _faces = [
-        0,    1,    2,
-        0,    2,    3,
-        0,    3,    4,
-        0,    4,    1,
-        1,    5,    2,
-        2,    5,    3,
-        3,    5,    4,
-        4,    5,    1
-    ];
-    for(var i = 0; i < _faces.length; i++) {
-        vertices[3*i + 0] = _vertices[_faces[i] + 0];
-        vertices[3*i + 1] = _vertices[_faces[i] + 1];
-        vertices[3*i + 2] = _vertices[_faces[i] + 2];
-    }
-
-    that.light.createVerticesBuffer(gl, new Float32Array(vertices));
+    gl.useProgram(this.program.program);
 };
 
-Rendering.Demos.Demo4.stop = function() {
-    console.log("stop demo 4");
+Rendering.Demos_Demo3.prototype.stop = function() {
+    console.log("stop demo 3");
 
     delete this.model;
 };
-
-var rot = 30;
-Rendering.Demos.Demo4.frame = function(gl) {
-    gl.useProgram(Rendering.Programs.Light_Texture.program);
-
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo3.prototype.frame = function(gl) {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    rot++;
-    if(rot > 360) rot -= 360;
+    this.rotY++;
+    if(this.rotY > 360) this.rotY -= 360;
 
     var modelView = mat4.create();
     mat4.identity(modelView);
+    mat4.rotate(modelView, this.rotY/180*Math.PI, [0, 1, 0]);
     mat4.rotate(modelView, -Math.PI/2, [1, 0, 0]);
-    mat4.rotate(modelView, -Math.PI/2, [0, 0, 1]);
     mat4.scale(modelView, [0.1, 0.1, 0.1]);
-    gl.uniformMatrix4fv(Rendering.Programs.Light_Texture.uniforms.MVMatrix, false, modelView);
+    gl.uniformMatrix4fv(this.program.uniforms.MVMatrix, false, modelView);
 
-    var light = vec3.create([0.85, 0.8, 0.75]);
-
-    var lightMat = mat4.create();
-    mat4.identity(lightMat);
-    mat4.rotate(lightMat, rot/180*Math.PI, [0, 0, 1]);
-    mat4.rotate(lightMat, rot/180*Math.PI, [1, 0, 0]);
-    mat4.multiplyVec3(lightMat, light);
-    gl.uniform3f(Rendering.Programs.Light_Texture.uniforms.Light, light[0], light[1], light[2]);
-
-    if(this.model && this.model.textureLoaded) Rendering.Programs.Light_Texture.draw(gl, this.model);
-
-    //gl.useProgram(Rendering.Programs.Basic.program);
-    //Rendering.Programs.Basic.draw(gl, this.light);
+    if(this.model && this.model.textureLoaded) this.program.draw(gl, this.model);
     gl.flush();
 };/**
  * Created by JetBrains PhpStorm.
@@ -15807,15 +20181,42 @@ Rendering.Demos.Demo4.frame = function(gl) {
  * To change this template use File | Settings | File Templates.
  */
 
-goog.provide("Rendering.Demos.Demo1");
+goog.provide("Rendering.Demos_Demo4");
+goog.require('Rendering.Demos_Interface');
 goog.require("Rendering.Import.Element_Array");
-goog.require("Rendering.Programs.Normal2Color");
+goog.require("Rendering.Programs_Light_Texture");
 goog.require('Rendering.Model');
 
-Rendering.Demos.Demo1.title = "Normal2color T-Rex";
 
-Rendering.Demos.Demo1.run = function(gl) {
-    console.log("run demo 1");
+/**
+ * @constructor
+ * @implements {Rendering.Demos_Interface}
+ * @param {WebGLRenderingContext}
+*/
+Rendering.Demos_Demo4 = function(gl) {
+    /*
+     * @type {Rendering.Programs_Interface}
+     */
+    this.program = new Rendering.Programs_Light_Texture(gl);
+
+    /*
+     * @type {number}
+     */
+    this.rot = 30;
+
+    /*
+     * @type {Rendering.Model?}
+     */
+    this.model = null;
+};
+
+
+Rendering.Demos_Demo4.prototype.title = "Lights & Textured T-Rex";
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo4.prototype.run = function(gl) {
+    console.log("run demo 4");
 
     var that = this;
     var parser = new Rendering.Import.Element_Array();
@@ -15826,91 +20227,46 @@ Rendering.Demos.Demo1.run = function(gl) {
             that.model.createVerticesBuffer(gl, vertices);
             if(normals) that.model.createNormalsBuffer(gl, normals);
             if(uvs) that.model.createUVsBuffer(gl, uvs);
+
+            that.model.loadTexture(gl, 'assets/tyrannosaurus_rex/tyrannosaurus_rex_diffuse.png');
         }
     );
-
-    gl.useProgram(Rendering.Programs.Normal2Color.program);
+    gl.useProgram(this.program.program);
 };
 
-Rendering.Demos.Demo1.stop = function() {
-    console.log("stop demo 1");
+Rendering.Demos_Demo4.prototype.stop = function() {
+    console.log("stop demo 4");
 
     delete this.model;
+    delete this.program;
 };
-
-var rotX = 30, rotY = 30, rotZ = 0;
-Rendering.Demos.Demo1.frame = function(gl) {
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo4.prototype.frame = function(gl) {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    rotY++;
-    if(rotY > 360) rotY -= 360;
+    this.rot++;
+    if(this.rot > 360) this.rot -= 360;
 
     var modelView = mat4.create();
     mat4.identity(modelView);
-    mat4.rotate(modelView, rotY/180*Math.PI, [0, 1, 0]);
     mat4.rotate(modelView, -Math.PI/2, [1, 0, 0]);
+    mat4.rotate(modelView, -Math.PI/2, [0, 0, 1]);
     mat4.scale(modelView, [0.1, 0.1, 0.1]);
-    gl.uniformMatrix4fv(Rendering.Programs.Normal2Color.uniforms.MVMatrix, false, modelView);
+    gl.uniformMatrix4fv(this.program.uniforms.MVMatrix, false, modelView);
 
-    if(this.model) Rendering.Programs.Normal2Color.draw(gl, this.model);
+    var light = vec3.create([0.85, 0.8, 0.75]);
+
+    var lightMat = mat4.create();
+    mat4.identity(lightMat);
+    mat4.rotate(lightMat, this.rot/180*Math.PI, [0, 0, 1]);
+    mat4.rotate(lightMat, this.rot/180*Math.PI, [1, 0, 0]);
+    mat4.multiplyVec3(lightMat, light);
+    gl.uniform3f(this.program.uniforms.Light, light[0], light[1], light[2]);
+
+    if(this.model && this.model.textureLoaded) this.program.draw(gl, this.model);
     gl.flush();
-};/**
- * Created by JetBrains PhpStorm.
- * User: fridek
- * Date: 10.03.12
- * Time: 13:18
- * To change this template use File | Settings | File Templates.
- */
-
-goog.provide("Rendering.Programs.Basic");
-
-Rendering.Programs.Basic.init = function(gl) {
-    var vshader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vshader,'attribute vec3 aVertexPosition; uniform mat4 MVMatrix; void main(void) { gl_Position = MVMatrix * vec4(aVertexPosition, 1.0);}');
-    gl.compileShader(vshader);
-    if (!gl.getShaderParameter(vshader, gl.COMPILE_STATUS)) {
-        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
-    }
-
-
-    var fshader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fshader, 'void main(void){gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);}');
-    gl.compileShader(fshader);
-    if (!gl.getShaderParameter(fshader, gl.COMPILE_STATUS)) {
-        alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
-    }
-
-    var program = gl.createProgram();
-    gl.attachShader(program, fshader);
-    gl.attachShader(program, vshader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
-        alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
-        return;
-    }
-
-    // Validates and uses program in the GL context
-    gl.validateProgram(program);
-    if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-        alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
-        return;
-    }
-
-    this.program = program;
-    this.uniforms=  {
-            MVMatrix: gl.getUniformLocation(program, "MVMatrix")
-        };
-    this.attribs = {
-            vertexPosition: gl.getAttribLocation(program, 'aVertexPosition')
-        };
-    gl.enableVertexAttribArray(this.attribs.vertexPosition);
-};
-
-
-Rendering.Programs.Basic.draw = function(gl, model) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.verticesBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Basic.attribs.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, model.verticesBufferSize);
 };// Copyright 2006 The Closure Library Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19193,46 +23549,38 @@ goog.dom.DomHelper.prototype.getAncestorByClass =
  */
 goog.dom.DomHelper.prototype.getAncestor = goog.dom.getAncestor;
 goog.provide("Rendering");
+goog.provide("Rendering.Runner");
 
 goog.require('goog.dom');
 goog.require('goog.events');
+goog.require('goog.webgl');
+
+/**
+ * tojicode gl-matrix
+ */
+goog.require("mat4");
+goog.require("vec2");
+goog.require("vec3");
+goog.require("quat4");
 
 goog.require("Rendering.Stats");
-
 /*
+goog.require("Rendering.Programs_Basic");
+goog.require("Rendering.Programs_Normal2Color");
+goog.require("Rendering.Programs_Texture");
+goog.require("Rendering.Programs_Light_Texture");
+*/
 
+goog.require('Rendering.Demos_Demo1');
+goog.require('Rendering.Demos_Demo2');
+goog.require('Rendering.Demos_Demo3');
+goog.require('Rendering.Demos_Demo4');
+
+/**
+ *
+ * @constructor
  */
-Rendering.canvas = null;
-
-Rendering.selectDemo = null;
-
-Rendering.CANVAS_WIDTH = 800;
-Rendering.CANVAS_HEIGHT = 400;
-
-goog.require("Rendering.Programs.Basic");
-goog.require("Rendering.Programs.Normal2Color");
-goog.require("Rendering.Programs.Texture");
-goog.require("Rendering.Programs.Light_Texture");
-
-goog.require('Rendering.Demos.Demo1');
-goog.require('Rendering.Demos.Demo2');
-goog.require('Rendering.Demos.Demo3');
-goog.require('Rendering.Demos.Demo4');
-
-Rendering.initContext = function() {
-    var gl;
-    try {gl = Rendering.canvas.getContext('experimental-webgl');}
-    catch(e) {alert('Exception catched in getContext: '+e.toString());return;}
-    if(!gl) {alert('Unable to create Web GL context');return;}
-
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-
-    this.gl = gl;
-};
-
-Rendering.init = function() {
+Rendering.Runner = function() {
     if (!window['requestAnimationFrame']) {
         window['requestAnimationFrame'] = (function(){
             return  window['webkitRequestAnimationFrame'] ||
@@ -19245,55 +23593,101 @@ Rendering.init = function() {
         })();
     }
 
-    Rendering.canvas = goog.dom.createDom('canvas');
-    Rendering.canvas.width = Rendering.CANVAS_WIDTH;
-    Rendering.canvas.height = Rendering.CANVAS_HEIGHT;
-    document.body.appendChild(Rendering.canvas);
+    this.canvas = null;
 
-    Rendering.initContext();
-    Rendering.Programs.Basic.init(Rendering.gl);
-    Rendering.Programs.Normal2Color.init(Rendering.gl);
-    Rendering.Programs.Texture.init(Rendering.gl);
-    Rendering.Programs.Light_Texture.init(Rendering.gl);
+    this.selectDemo = null;
 
-    Rendering.selectDemo = goog.dom.createDom('select');
+    /**
+     * @const
+     * @type {Number}
+     */
+    this.CANVAS_WIDTH = 800;
+    /**
+     * @const
+     * @type {Number}
+     */
+    this.CANVAS_HEIGHT = 400;
+
+    this.canvas = goog.dom.createDom('canvas');
+    this.canvas.width = this.CANVAS_WIDTH;
+    this.canvas.height = this.CANVAS_HEIGHT;
+    document.body.appendChild(this.canvas);
+
+    this.initContext();
+
+    this.selectDemo = goog.dom.createDom('select');
     var opt = goog.dom.createDom('option');
     opt.text = "== choose demo ==";
     opt.value = 0;
-    Rendering.selectDemo.add(opt, null);
+    this.selectDemo.add(opt, null);
 
-    Rendering.currentDemo = "Demo4";
+    /*
+     * @type {Rendering.Demos_Interface}
+     */
+    this.currentDemo = new Rendering.Demos_Demo1(this.gl);
 
-    goog.events.listen(Rendering.selectDemo, goog.events.EventType.CHANGE, function() {
-        if(Rendering.currentDemo != 0) Rendering.Demos[Rendering.currentDemo].stop();
-        Rendering.currentDemo = Rendering.selectDemo.value;
-        if(Rendering.currentDemo != 0) Rendering.Demos[Rendering.currentDemo].run(Rendering.gl);
+    /**
+     * @type {?Array.<Rendering.Demos_Interface>}
+     */
+    var demos = [
+        null,
+        Rendering.Demos_Demo1,
+        Rendering.Demos_Demo2,
+        Rendering.Demos_Demo3,
+        Rendering.Demos_Demo4
+    ];
+
+    var that = this;
+    goog.events.listen(this.selectDemo, goog.events.EventType.CHANGE, function() {
+        that.currentDemo.stop();
+        if(that.selectDemo.value == 0) {
+            that.currentDemo = null;
+            return;
+        }
+        that.currentDemo = new demos[that.selectDemo.value](that.gl);
+        that.currentDemo.run(that.gl);
     }, false);
 
-    for(var i in Rendering.Demos) {
-        if(Rendering.Demos.hasOwnProperty(i)) {
-            opt = goog.dom.createDom('option');
-            opt.text = Rendering.Demos[i].title;
-            opt.value = i;
-            Rendering.selectDemo.add(opt, null);
-        }
+    for(var i = 1; i < demos.length; i++) {
+        opt = goog.dom.createDom('option');
+        opt.text = demos[i].prototype.title;
+        opt.value = i;
+        this.selectDemo.add(opt, null);
     }
 
-    document.body.appendChild(Rendering.selectDemo);
-    Rendering.Demos.Demo4.run(Rendering.gl, Rendering.programs);
+    document.body.appendChild(this.selectDemo);
+    this.currentDemo.run(this.gl);
 
-    Rendering.stat = new Rendering.Stats();
-    Rendering.stat.domElement.style.position = 'absolute';
-    Rendering.stat.domElement.style.top = '10px';
-    Rendering.stat.domElement.style.left = '10px';
-    document.body.appendChild(Rendering.stat.domElement);
-    window['requestAnimationFrame'](Rendering.frame);
+    this.stat = new Rendering.Stats();
+    this.stat.domElement.style.position = 'absolute';
+    this.stat.domElement.style.top = '10px';
+    this.stat.domElement.style.left = '10px';
+    document.body.appendChild(this.stat.domElement);
 };
 
-Rendering.frame = function() {
-    if(Rendering.currentDemo != 0) Rendering.Demos[Rendering.currentDemo].frame(Rendering.gl);
-    Rendering.stat.update();
-    window['requestAnimationFrame'](Rendering.frame);
+Rendering.Runner.prototype.initContext = function() {
+    var gl;
+    try {gl = this.canvas.getContext('experimental-webgl');}
+    catch(e) {alert('Exception catched in getContext: '+e.toString());return;}
+    if(!gl) {alert('Unable to create Web GL context');return;}
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(goog.webgl.COLOR_BUFFER_BIT);
+    gl.enable(goog.webgl.DEPTH_TEST);
+    /**
+     * @type {WebGLRenderingContext}
+     */
+    this.gl = gl;
 };
 
-window.addEventListener("load", Rendering.init);
+Rendering.Runner.prototype.frame = function() {
+    if(this.currentDemo) this.currentDemo.frame(this.gl);
+    this.stat.update();
+    window['requestAnimationFrame'](this.frame);
+};
+
+window.addEventListener("load", function() {
+    var runner = new Rendering.Runner();
+    runner.frame = runner.frame.bind(runner);
+    window['requestAnimationFrame'](runner.frame);
+});

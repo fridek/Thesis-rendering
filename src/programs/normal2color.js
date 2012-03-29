@@ -6,10 +6,16 @@
  * To change this template use File | Settings | File Templates.
  */
 
-goog.provide("Rendering.Programs.Normal2Color");
+goog.require("Rendering.Programs_Interface");
+goog.provide("Rendering.Programs_Normal2Color");
 
-Rendering.Programs.Normal2Color.init = function(gl) {
-    var vshader = gl.createShader(gl.VERTEX_SHADER);
+/**
+ * @constructor
+ * @implements {Rendering.Programs_Interface}
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Programs_Normal2Color = function(gl) {
+    var vshader = gl.createShader(goog.webgl.VERTEX_SHADER);
     gl.shaderSource(vshader,[
         'attribute vec3 aVertexPosition;',
         'attribute vec3 normalPosition;',
@@ -24,12 +30,12 @@ Rendering.Programs.Normal2Color.init = function(gl) {
         '}'].join("\n")
     );
     gl.compileShader(vshader);
-    if (!gl.getShaderParameter(vshader, gl.COMPILE_STATUS)) {
+    if (!gl.getShaderParameter(vshader, goog.webgl.COMPILE_STATUS)) {
         alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(vshader)); return;
     }
 
 
-    var fshader = gl.createShader(gl.FRAGMENT_SHADER);
+    var fshader = gl.createShader(goog.webgl.FRAGMENT_SHADER);
     gl.shaderSource(fshader, [
         'varying mediump vec4 vVaryingColor;',
         'void main(void)',
@@ -37,7 +43,7 @@ Rendering.Programs.Normal2Color.init = function(gl) {
             'gl_FragColor = vVaryingColor;',
         '}'].join("\n"));
     gl.compileShader(fshader);
-    if (!gl.getShaderParameter(fshader, gl.COMPILE_STATUS)) {
+    if (!gl.getShaderParameter(fshader, goog.webgl.COMPILE_STATUS)) {
         alert('Error during vertex shader compilation:\n' + gl.getShaderInfoLog(fshader)); return;
     }
 
@@ -45,22 +51,30 @@ Rendering.Programs.Normal2Color.init = function(gl) {
     gl.attachShader(program, fshader);
     gl.attachShader(program, vshader);
     gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
+    if (!gl.getProgramParameter(program, goog.webgl.LINK_STATUS)){
         alert("Error during program linking:\n" + gl.getProgramInfoLog(program));
         return;
     }
 
     // Validates and uses program in the GL context
     gl.validateProgram(program);
-    if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+    if (!gl.getProgramParameter(program, goog.webgl.VALIDATE_STATUS)) {
         alert("Error during program validation:\n" + gl.getProgramInfoLog(program));
         return;
     }
-
+    /**
+     * @type {WebGLProgram}
+     */
     this.program = program;
+    /**
+     * @type {Object.<WebGLUniformLocation>}
+     */
     this.uniforms=  {
             MVMatrix: gl.getUniformLocation(program, "MVMatrix")
         };
+    /**
+     * @type {Object.<number>}
+     */
     this.attribs = {
             vertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
             normalPosition: gl.getAttribLocation(program, 'normalPosition')
@@ -68,11 +82,14 @@ Rendering.Programs.Normal2Color.init = function(gl) {
     gl.enableVertexAttribArray(this.attribs.vertexPosition);
     gl.enableVertexAttribArray(this.attribs.normalPosition);
 };
-
-Rendering.Programs.Normal2Color.draw = function(gl, model) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.verticesBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Normal2Color.attribs.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.normalsBuffer);
-    gl.vertexAttribPointer(Rendering.Programs.Normal2Color.attribs.normalPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, model.verticesBufferSize);
+/**
+ * @param {WebGLRenderingContext}
+ * @param {Rendering.Model}
+ */
+Rendering.Programs_Normal2Color.prototype.draw = function(gl, model) {
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+    gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
+    gl.vertexAttribPointer(this.attribs.normalPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
 };

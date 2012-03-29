@@ -6,14 +6,52 @@
  * To change this template use File | Settings | File Templates.
  */
 
-goog.provide("Rendering.Demos.Demo1");
+goog.provide("Rendering.Demos_Demo1");
+goog.require('Rendering.Demos_Interface');
+
 goog.require("Rendering.Import.Element_Array");
-goog.require("Rendering.Programs.Normal2Color");
+goog.require("Rendering.Programs_Normal2Color");
 goog.require('Rendering.Model');
 
-Rendering.Demos.Demo1.title = "Normal2color T-Rex";
+/**
+ * @constructor
+ * @implements {Rendering.Demos_Interface}
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo1 = function(gl) {
+    /**
+     * @type {Rendering.Programs_Interface}
+     */
+    this.program = new Rendering.Programs_Normal2Color(gl);
 
-Rendering.Demos.Demo1.run = function(gl) {
+    /**
+    * @type {number}
+     */
+    this.rotX = 30;
+    /**
+     * @type {number}
+     */
+    this.rotY = 30;
+    /**
+     * @type {number}
+     */
+    this.rotZ = 0;
+    /**
+    * @type {?Rendering.Model}
+     */
+    this.model = null;
+};
+
+/**
+ * @const
+ * @type {string}
+ */
+Rendering.Demos_Demo1.prototype.title = "Normal2color T-Rex";
+
+/**
+* @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo1.prototype.run = function(gl) {
     console.log("run demo 1");
 
     var that = this;
@@ -28,29 +66,30 @@ Rendering.Demos.Demo1.run = function(gl) {
         }
     );
 
-    gl.useProgram(Rendering.Programs.Normal2Color.program);
+    gl.useProgram(this.program.program);
 };
 
-Rendering.Demos.Demo1.stop = function() {
+Rendering.Demos_Demo1.prototype.stop = function() {
     console.log("stop demo 1");
-
+    delete this.program;
     delete this.model;
 };
 
-var rotX = 30, rotY = 30, rotZ = 0;
-Rendering.Demos.Demo1.frame = function(gl) {
+/**
+ * @param {WebGLRenderingContext}
+ */
+Rendering.Demos_Demo1.prototype.frame = function(gl) {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    rotY++;
-    if(rotY > 360) rotY -= 360;
+    this.rotY++;
+    if(this.rotY > 360) this.rotY -= 360;
 
     var modelView = mat4.create();
     mat4.identity(modelView);
-    mat4.rotate(modelView, rotY/180*Math.PI, [0, 1, 0]);
+    mat4.rotate(modelView, this.rotY/180*Math.PI, [0, 1, 0]);
     mat4.rotate(modelView, -Math.PI/2, [1, 0, 0]);
     mat4.scale(modelView, [0.1, 0.1, 0.1]);
-    gl.uniformMatrix4fv(Rendering.Programs.Normal2Color.uniforms.MVMatrix, false, modelView);
-
-    if(this.model) Rendering.Programs.Normal2Color.draw(gl, this.model);
+    gl.uniformMatrix4fv(this.program.uniforms.MVMatrix, false, modelView);
+    if(this.model) this.program.draw(gl, this.model);
     gl.flush();
 };

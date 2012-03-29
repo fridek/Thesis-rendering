@@ -8,42 +8,91 @@
 
 goog.provide("Rendering.Model");
 
+/**
+ *
+ * @constructor
+ */
 Rendering.Model = function() {
+    /**
+     * @type {Boolean}
+     */
+    this.textureLoaded = false;
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Float32Array} vertices
+ */
+Rendering.Model.prototype.createVerticesBuffer = function(gl, vertices) {
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.verticesBuffer = gl.createBuffer();
+    /**
+     * @type {Number}
+     */
+    this.verticesBufferSize = vertices.length/3;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.verticesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Float32Array} normals
+ */
+Rendering.Model.prototype.createNormalsBuffer = function(gl, normals) {
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.normalsBuffer = gl.createBuffer();
+    /**
+     * @type {Number}
+     */
+    this.normalsBufferSize = normals.length/3;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {Float32Array} uvs
+ */
+Rendering.Model.prototype.createUVsBuffer = function(gl, uvs) {
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.uvsBuffer = gl.createBuffer();
+    /**
+     * @type {Number}
+     */
+    this.uvsBufferSize = uvs.length/2;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
+};
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl
+ * @param {String} filename
+ */
+Rendering.Model.prototype.loadTexture = function(gl, filename) {
+    /**
+     * @type {WebGLTexture}
+     */
+    this.texture = gl.createTexture();
+    var img = new Image();
     var that = this;
-
-    this.createVerticesBuffer = function(gl, vertices) {
-        that.verticesBuffer = gl.createBuffer();
-        that.verticesBufferSize = vertices.length/3;
-        gl.bindBuffer(gl.ARRAY_BUFFER, that.verticesBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    img.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, that.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        that.textureLoaded = true;
     };
-
-    this.createNormalsBuffer = function(gl, normals) {
-        that.normalsBuffer = gl.createBuffer();
-        that.normalsBufferSize = normals.length/3;
-        gl.bindBuffer(gl.ARRAY_BUFFER, that.normalsBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-    };
-
-    this.createUVsBuffer = function(gl, uvs) {
-        that.uvsBuffer = gl.createBuffer();
-        that.uvsBufferSize = uvs.length/2;
-        gl.bindBuffer(gl.ARRAY_BUFFER, that.uvsBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
-    };
-
-    this.loadTexture = function(gl, filename) {
-        that.texture = gl.createTexture();
-        var img = new Image();
-        img.onload = function() {
-            gl.bindTexture(gl.TEXTURE_2D, that.texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-            gl.generateMipmap(gl.TEXTURE_2D);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            that.textureLoaded = true;
-        };
-        img.src = filename;
-    };
+    img.src = filename;
 };

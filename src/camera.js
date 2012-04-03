@@ -22,7 +22,7 @@ Rendering.Camera = function() {
     /**
      * @type {mat4}
      */
-    this.projection = mat4.perspective(45, 4/2, 1, 100);
+    this.projection = mat4.perspective(60, 4/2, 0.1, 100);
 
     /**
      * @type {mat4}

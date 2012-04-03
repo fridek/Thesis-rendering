@@ -25,6 +25,10 @@ goog.require('Rendering.Demos_Demo1');
 goog.require('Rendering.Demos_Demo2');
 goog.require('Rendering.Demos_Demo3');
 goog.require('Rendering.Demos_Demo4');
+goog.require('Rendering.Demos_Demo5');
+//goog.require('Rendering.Demos_Demo6');
+goog.require('Rendering.Demos_Demo7');
+goog.require('Rendering.Demos_Demo8');
 
 /**
  *
@@ -84,7 +88,10 @@ Rendering.Runner = function() {
         Rendering.Demos_Demo1,
         Rendering.Demos_Demo2,
         Rendering.Demos_Demo3,
-        Rendering.Demos_Demo4
+        Rendering.Demos_Demo4,
+        Rendering.Demos_Demo5,
+        Rendering.Demos_Demo7,
+        Rendering.Demos_Demo8
     ];
 
     var that = this;

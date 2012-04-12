@@ -104,5 +104,5 @@ Rendering.Programs_Texture.prototype.draw = function(gl, model) {
     gl.bindTexture(goog.webgl.TEXTURE_2D, model.texture);
     gl.uniform1i(this.uniforms.texture_unit, 0);
 
-    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+    gl.drawArrays(model.verticesType, 0, model.verticesBufferSize);
 };

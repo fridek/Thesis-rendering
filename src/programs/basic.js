@@ -71,5 +71,5 @@ Rendering.Programs_Basic = function(gl) {
 Rendering.Programs_Basic.prototype.draw = function(gl, model) {
     gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
     gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
-    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+    gl.drawArrays(model.verticesType, 0, model.verticesBufferSize);
 };

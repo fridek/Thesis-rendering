@@ -26,7 +26,7 @@ goog.require('Rendering.Demos_Demo2');
 goog.require('Rendering.Demos_Demo3');
 goog.require('Rendering.Demos_Demo4');
 goog.require('Rendering.Demos_Demo5');
-//goog.require('Rendering.Demos_Demo6');
+goog.require('Rendering.Demos_Demo6');
 goog.require('Rendering.Demos_Demo7');
 goog.require('Rendering.Demos_Demo8');
 
@@ -35,6 +35,10 @@ goog.require('Rendering.Demos_Demo8');
  * @constructor
  */
 Rendering.Runner = function() {
+    /**
+     * fallback for browsers without requestAnimationFrame
+     * which probably don't support WebGL anyway
+     */
     if (!window['requestAnimationFrame']) {
         window['requestAnimationFrame'] = (function(){
             return  window['webkitRequestAnimationFrame'] ||
@@ -90,6 +94,7 @@ Rendering.Runner = function() {
         Rendering.Demos_Demo3,
         Rendering.Demos_Demo4,
         Rendering.Demos_Demo5,
+        Rendering.Demos_Demo6,
         Rendering.Demos_Demo7,
         Rendering.Demos_Demo8
     ];

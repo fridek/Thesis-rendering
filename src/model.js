@@ -14,9 +14,14 @@ goog.provide("Rendering.Model");
  */
 Rendering.Model = function() {
     /**
-     * @type {Boolean}
+     * @type {number}
      */
-    this.textureLoaded = false;
+    this.verticesType = goog.webgl.TRIANGLES;
+
+    /**
+     * @type {number}
+     */
+    this.verticesIndexingType = goog.webgl.ARRAY_BUFFER;
 };
 
 /**
@@ -79,6 +84,11 @@ Rendering.Model.prototype.createUVsBuffer = function(gl, uvs) {
  * @param {String} filename
  */
 Rendering.Model.prototype.loadTexture = function(gl, filename) {
+    /**
+     * @type {Boolean}
+     */
+    this.textureLoaded = false;
+
     /**
      * @type {WebGLTexture}
      */

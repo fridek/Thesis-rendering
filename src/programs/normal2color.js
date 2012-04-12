@@ -91,5 +91,5 @@ Rendering.Programs_Normal2Color.prototype.draw = function(gl, model) {
     gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
     gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
     gl.vertexAttribPointer(this.attribs.normalPosition, 3, goog.webgl.FLOAT, false, 0, 0);
-    gl.drawArrays(goog.webgl.TRIANGLES, 0, model.verticesBufferSize);
+    gl.drawArrays(model.verticesType, 0, model.verticesBufferSize);
 };

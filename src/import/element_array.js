@@ -20,6 +20,7 @@ Rendering.Import.Element_Array = function() {
         var verticesText, facesText;
         var parse = function() {
             var verticesLines = verticesText.split("\n");
+            console.log("vertices count: ", verticesLines.length);
             var _vertices = new Float32Array(verticesLines.length*3);
 
             var hasNormals = (verticesLines[0].split(" ").length > 3);
@@ -49,7 +50,7 @@ Rendering.Import.Element_Array = function() {
             }
 
             var facesLines = facesText.split("\n");
-
+            console.log("triangles count: ", facesLines.length);
             var vertices = new Float32Array(facesLines.length*3*3); // 3-coords for every 3 points for one triangle
             var normals = new Float32Array(facesLines.length*3*3); // 3-element vector for every 3 points for one triangle
             var uvs = new Float32Array(facesLines.length*2*3); // 2-coords for every 3 points for one triangle

@@ -6,6 +6,8 @@
  * To change this template use File | Settings | File Templates.
  */
 
+goog.require('vec3');
+
 goog.provide("Rendering.Model");
 
 /**
@@ -22,6 +24,69 @@ Rendering.Model = function() {
      * @type {number}
      */
     this.verticesIndexingType = goog.webgl.ARRAY_BUFFER;
+
+    /**
+     * @type {vec3}
+     */
+    this.position = vec3.create([0,0,0]);
+};
+
+/**
+ * @param {Rendering.Model} model
+ */
+Rendering.Model.prototype.createInstance = function(model) {
+    /**
+     * @type {number}
+     */
+    this.verticesType = model.verticesType;
+    /**
+     * @type {number}
+     */
+    this.verticesIndexingType = model.verticesIndexingType;
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.verticesBuffer = model.verticesBuffer;
+    /**
+     *
+     * @type {Number}
+     */
+    this.verticesBufferSize = model.verticesBufferSize;
+    /**
+     *
+     * @type {WebGLBuffer}
+     */
+    this.normalsBuffer = model.normalsBuffer;
+    /**
+     *
+     * @type {Number}
+     */
+    this.normalsBufferSize = model.normalsBufferSize;
+    /**
+     *
+     * @type {WebGLBuffer}
+     */
+    this.uvsBuffer = model.uvsBuffer;
+    /**
+     *
+     * @type {Number}
+     */
+    this.uvsBufferSize = model.uvsBufferSize;
+    /**
+     *
+     * @type {WebGLTexture}
+     */
+    this.texture = model.texture;
+    /**
+     *
+     * @type {Boolean}
+     */
+    this.textureLoaded = model.textureLoaded;
+    /**
+     *
+     * @type {vec3}
+     */
+    this.position = model.position;
 };
 
 /**

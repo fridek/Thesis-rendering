@@ -29,6 +29,9 @@ goog.require('Rendering.Demos_Demo5');
 goog.require('Rendering.Demos_Demo6');
 goog.require('Rendering.Demos_Demo7');
 goog.require('Rendering.Demos_Demo8');
+goog.require('Rendering.Demos_Demo9');
+goog.require('Rendering.Demos_Demo10');
+goog.require('Rendering.Demos_Demo11');
 
 /**
  *
@@ -96,12 +99,17 @@ Rendering.Runner = function() {
         Rendering.Demos_Demo5,
         Rendering.Demos_Demo6,
         Rendering.Demos_Demo7,
-        Rendering.Demos_Demo8
+        Rendering.Demos_Demo8,
+        Rendering.Demos_Demo9,
+        Rendering.Demos_Demo10,
+        Rendering.Demos_Demo11
     ];
 
     var that = this;
     goog.events.listen(this.selectDemo, goog.events.EventType.CHANGE, function() {
-        that.currentDemo.stop();
+        if(that.currentDemo) {
+            that.currentDemo.stop();
+        }
         if(that.selectDemo.value == 0) {
             that.currentDemo = null;
             return;

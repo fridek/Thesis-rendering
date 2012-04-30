@@ -14,6 +14,12 @@ goog.provide("Rendering.Import.Element_Array");
  * @constructor
  */
 Rendering.Import.Element_Array = function() {
+    /**
+     *
+     * @param verticesFile
+     * @param facesFile
+     * @param callback
+     */
     this.load = function(verticesFile, facesFile, callback) {
         var oneCompleted = false;
 

@@ -63,6 +63,23 @@ Rendering.Demos_Demo10.prototype.run = function(gl) {
     this.frameNo = 0;
 
     /**
+     * @type {mat4}
+     */
+    this.instanceMV = mat4.identity();
+    /**
+     * @type {Number}
+     */
+    this.tmp1 = 0;
+    /**
+     * @type {Number}
+     */
+    this.tmp2 = 0;
+    /**
+     * @type {Number}
+     */
+    this.i = 0;
+
+    /**
      * @type {Array.<Rendering.Model_Cube>}
      */
     this.models = [];
@@ -96,19 +113,19 @@ Rendering.Demos_Demo10.prototype.frame = function(gl) {
     mat4.rotate(this.modelView, 0.5/180*Math.PI, [0, 1, 0]);
     mat4.rotate(this.modelView, 0.75/180*Math.PI, [1, 0, 0]);
 
-    /**
-     * @type {mat4}
-     */
-    var instanceMV = mat4.identity();
+    mat4.identity(this.instanceMV);
 
-    for(var i = 0; i < this.numberOfCubes; i++) {
-        this.models[i].position[0] = Math.sin(Math.PI/180 * (i%1000) * this.frameNo / 20);
-        this.models[i].position[1] = Math.cos(Math.PI/180 * (i%1000) * this.frameNo / 20);
+    this.tmp1 = Math.PI/180 * this.frameNo / 20;
 
-        mat4.translate(this.modelView, this.models[i].position, instanceMV);
-        gl.uniformMatrix4fv(this.program.uniforms.modelMatrix, false, instanceMV);
-        if(this.models[i]) {
-            this.program.draw(gl, this.models[i]);
+    for(this.i = 0; this.i < this.numberOfCubes; this.i++) {
+        this.tmp2 = this.tmp1 * this.i%1000;
+        this.models[this.i].position[0] = Math.sin(this.tmp2);
+        this.models[this.i].position[1] = Math.cos(this.tmp2);
+
+        mat4.translate(this.modelView, this.models[this.i].position, this.instanceMV);
+        gl.uniformMatrix4fv(this.program.uniforms.modelMatrix, false, this.instanceMV);
+        if(this.models[this.i]) {
+            this.program.draw(gl, this.models[this.i]);
         }
     }
     gl.flush();

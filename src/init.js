@@ -31,8 +31,12 @@ goog.require('Rendering.Demos_Demo7');
 goog.require('Rendering.Demos_Demo8');
 goog.require('Rendering.Demos_Demo9');
 goog.require('Rendering.Demos_Demo10');
+goog.require('Rendering.Demos_Demo13');
 goog.require('Rendering.Demos_Demo11');
 goog.require('Rendering.Demos_Demo12');
+goog.require('Rendering.Demos_Demo14');
+goog.require('Rendering.Demos_Demo15');
+
 
 /**
  *
@@ -103,8 +107,11 @@ Rendering.Runner = function() {
         Rendering.Demos_Demo8,
         Rendering.Demos_Demo9,
         Rendering.Demos_Demo10,
+        Rendering.Demos_Demo13,
         Rendering.Demos_Demo11,
-        Rendering.Demos_Demo12
+        Rendering.Demos_Demo12,
+        Rendering.Demos_Demo14,
+        Rendering.Demos_Demo15
     ];
 
     var that = this;

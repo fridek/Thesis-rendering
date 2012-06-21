@@ -72,6 +72,18 @@ Rendering.Model.prototype.createInstance = function(model) {
      * @type {Number}
      */
     this.uvsBufferSize = model.uvsBufferSize;
+
+    /**
+     * @type {WebGLBuffer}
+     */
+    this.indicesBuffer = model.indicesBuffer;
+
+    /**
+     * @type {Number}
+     */
+    this.indicesBufferSize = model.indicesBufferSize;
+
+
     /**
      *
      * @type {WebGLTexture}
@@ -87,6 +99,8 @@ Rendering.Model.prototype.createInstance = function(model) {
      * @type {vec3}
      */
     this.position = model.position;
+
+
 };
 
 /**

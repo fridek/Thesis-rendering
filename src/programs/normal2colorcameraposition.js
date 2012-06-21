@@ -91,9 +91,23 @@ Rendering.Programs_Normal2ColorCameraPosition = function(gl) {
  * @param {Rendering.Model}
  */
 Rendering.Programs_Normal2ColorCameraPosition.prototype.draw = function(gl, model) {
-    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
-    gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
-    gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
-    gl.vertexAttribPointer(this.attribs.normalPosition, 3, goog.webgl.FLOAT, false, 0, 0);
-    gl.drawArrays(model.verticesType, 0, model.verticesBufferSize);
+    if(model.verticesIndexingType === goog.webgl.ARRAY_BUFFER) {
+        gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+        gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+        gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
+
+        gl.vertexAttribPointer(this.attribs.normalPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+        gl.drawArrays(model.verticesType, 0, model.verticesBufferSize);
+    }
+
+    if(model.verticesIndexingType === goog.webgl.ELEMENT_ARRAY_BUFFER) {
+        gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.verticesBuffer);
+        gl.vertexAttribPointer(this.attribs.vertexPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(goog.webgl.ARRAY_BUFFER, model.normalsBuffer);
+        gl.vertexAttribPointer(this.attribs.normalPosition, 3, goog.webgl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(goog.webgl.ELEMENT_ARRAY_BUFFER, model.indicesBuffer);
+        gl.drawElements(model.verticesType, model.indicesBufferSize*3, goog.webgl.UNSIGNED_SHORT, 0);
+    }
 };

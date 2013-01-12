@@ -1,1 +1,0 @@
-C:/Python27/python.exe D:\Dropbox\praca_magisterska\project1\closure\closure/bin/build/closurebuilder.py --root=D:\Dropbox\praca_magisterska\project1\closure\closure --root=D:\Dropbox\praca_magisterska\project1\closure\third_party --root=D:\Dropbox\praca_magisterska\project1\src --namespace="Rendering" -o "script" > D:\Dropbox\praca_magisterska\project1\build\debug.js

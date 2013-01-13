@@ -3,27 +3,29 @@
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
-goog.provide('smash.program.VertexShaderSource');
 goog.provide('smash.program.FragmentShaderSource');
+goog.provide('smash.program.VertexShaderSource');
+
 
 /**
  *
  * @enum {string}
  */
 smash.program.VertexShaderSource = {
-    NORMAL2COLOR: [
-      'attribute vec3 aVertexPosition;',
-      'attribute vec3 normalPosition;',
+  NORMAL2COLOR: [
+    'attribute vec3 aVertexPosition;',
+    'attribute vec3 normalPosition;',
 
-      'varying mediump vec4 vVaryingColor;',
-      'uniform mat4 MVMatrix;',
+    'varying mediump vec4 vVaryingColor;',
+    'uniform mat4 MVMatrix;',
 
-      'void main(void)',
-      '{',
-      'vVaryingColor = vec4(normalPosition, 1.0);',
-      'gl_Position = MVMatrix * vec4(aVertexPosition, 1.0);',
-      '}'].join('\n')
+    'void main(void)',
+    '{',
+    'vVaryingColor = vec4(normalPosition, 1.0);',
+    'gl_Position = MVMatrix * vec4(aVertexPosition, 1.0);',
+    '}'].join('\n')
 };
+
 
 /**
  *

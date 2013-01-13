@@ -5,8 +5,8 @@
 
 goog.provide('smash.program.Base');
 
-goog.require('smash.program.VertexShaderSource');
 goog.require('smash.program.FragmentShaderSource');
+goog.require('smash.program.VertexShaderSource');
 
 smash.program.Base = function(gl) {
   /**
@@ -31,7 +31,7 @@ smash.program.Base = function(gl) {
    * @type {WebGLProgram}
    * @private
    */
-  this.program_
+  this.program_;
 
   /**
    * @type {Object.<WebGLUniformLocation>}
@@ -43,6 +43,7 @@ smash.program.Base = function(gl) {
    */
   this.attribs_ = {};
 };
+
 
 /**
  *
@@ -65,6 +66,7 @@ smash.program.Base.prototype.compileShader_ = function(type, source) {
 
   return shader;
 };
+
 
 /**
  *
@@ -92,12 +94,14 @@ smash.program.Base.prototype.compileProgram_ = function() {
   }
 };
 
+
 /**
  * @enum {number}
  */
 smash.program.ProgramType = {
   NORMAL2COLOR: 1
 };
+
 
 /**
  * @param {smash.model.Base} model

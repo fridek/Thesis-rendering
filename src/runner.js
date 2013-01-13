@@ -78,9 +78,9 @@ smash.Runner.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   this.canvas_.render();
 
-//  var model = new smash.model.Cube(0.5);
+  //  var model = new smash.model.Cube(0.5);
   var model = new smash.model.Sphere(0.5, 1000, 1000,
-      goog.webgl.ARRAY_BUFFER);
+      goog.webgl.TRIANGLES, goog.webgl.ARRAY_BUFFER);
   model.setGl(this.canvas_.getGl());
   model.setProgram(new smash.program.Normal2Color(this.canvas_.getGl()));
   this.canvas_.addModel(model);

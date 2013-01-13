@@ -10,6 +10,8 @@ goog.provide('smash.program.Normal2Color');
 
 goog.require('smash.program.Base');
 
+
+
 /**
  * @constructor
  * @param {WebGLRenderingContext} gl

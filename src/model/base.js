@@ -14,6 +14,8 @@ goog.require('goog.math.Vec3');
 goog.require('mat3');
 goog.require('mat4');
 
+
+
 /**
  * @constructor
  * @extends {goog.events.EventTarget}
@@ -128,12 +130,14 @@ smash.model.Base = function(modelType) {
 };
 goog.inherits(smash.model.Base, goog.events.EventTarget);
 
+
 /**
  * @return {number}
  */
 smash.model.Base.prototype.getVerticesIndexingType = function() {
   return this.verticesIndexingType_;
-}
+};
+
 
 /**
  *
@@ -143,6 +147,7 @@ smash.model.Base.prototype.setGl = function(gl) {
   this.gl_ = gl;
 };
 
+
 /**
  *
  */
@@ -150,13 +155,14 @@ smash.model.Base.prototype.setProgram = function(program) {
   this.program_ = program;
 };
 
+
 /**
  *
  */
 smash.model.Base.prototype.draw = function() {
-  mat4.rotateX(this.modelView_, this.modelView_, 1.0/180 * Math.PI);
-  mat4.rotateY(this.modelView_, this.modelView_, 0.5/180 * Math.PI);
-  mat4.rotateZ(this.modelView_, this.modelView_, 0.75/180 * Math.PI);
+  mat4.rotateX(this.modelView_, this.modelView_, 1.0 / 180 * Math.PI);
+  mat4.rotateY(this.modelView_, this.modelView_, 0.5 / 180 * Math.PI);
+  mat4.rotateZ(this.modelView_, this.modelView_, 0.75 / 180 * Math.PI);
 
   if (this.state_ == smash.modelState.LOADED) {
     this.program_.draw(this);
@@ -170,6 +176,7 @@ smash.model.Base.prototype.draw = function() {
     }
   }
 };
+
 
 /**
  *
@@ -215,6 +222,7 @@ smash.model.Base.prototype.buildGlBuffers = function() {
   }
 };
 
+
 /**
  *
  * @param {WebGLUniformLocation} uniform
@@ -222,6 +230,7 @@ smash.model.Base.prototype.buildGlBuffers = function() {
 smash.model.Base.prototype.bindMVMatrix = function(uniform) {
   this.gl_.uniformMatrix4fv(uniform, false, this.modelView_);
 };
+
 
 /**
  *
@@ -234,6 +243,7 @@ smash.model.Base.prototype.bindVertices = function(attrib) {
       3, goog.webgl.FLOAT, false, 0, 0);
 };
 
+
 /**
  *
  * @param {number} attrib
@@ -245,6 +255,7 @@ smash.model.Base.prototype.bindNormals = function(attrib) {
       3, goog.webgl.FLOAT, false, 0, 0);
 };
 
+
 /**
  *
  * @enum {number}
@@ -255,6 +266,7 @@ smash.modelType = {
   MESH: 3
 };
 
+
 /**
  *
  * @enum {number}
@@ -262,4 +274,4 @@ smash.modelType = {
 smash.modelState = {
   BEFORE_LOAD: 0,
   LOADED: 1
-}
+};

@@ -7,6 +7,8 @@ goog.require('goog.dom');
 goog.require('goog.ui.Component');
 goog.require('goog.webgl');
 
+
+
 /**
  * @extends {goog.ui.Component}
  * @constructor
@@ -41,6 +43,7 @@ smash.Canvas = function(width, height) {
 };
 goog.inherits(smash.Canvas, goog.ui.Component);
 
+
 /**
  * @override
  */
@@ -52,6 +55,7 @@ smash.Canvas.prototype.createDom = function() {
   this.setElementInternal(element);
 };
 
+
 /**
  * @override
  */
@@ -60,11 +64,11 @@ smash.Canvas.prototype.enterDocument = function() {
 
   try {
     this.gl_ = this.getElement().getContext('experimental-webgl');
-  } catch(e) {
+  } catch (e) {
     alert('Exception catched in getContext: ' + e.toString());
     return;
   }
-  if(!this.gl_) {
+  if (!this.gl_) {
     alert('Unable to create Web GL context');
     return;
   }
@@ -74,6 +78,7 @@ smash.Canvas.prototype.enterDocument = function() {
   this.gl_.enable(goog.webgl.DEPTH_TEST);
 };
 
+
 /**
  *
  * @return {WebGLRenderingContext}
@@ -81,6 +86,7 @@ smash.Canvas.prototype.enterDocument = function() {
 smash.Canvas.prototype.getGl = function() {
   return this.gl_;
 };
+
 
 /**
  *
@@ -102,6 +108,7 @@ smash.Canvas.prototype.drawFrame = function() {
 
   this.gl_.flush();
 };
+
 
 /**
  * @override

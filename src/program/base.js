@@ -109,3 +109,10 @@ smash.program.ProgramType = {
 smash.program.Base.prototype.draw = function(model) {
   this.gl_.useProgram(this.program_);
 };
+
+smash.program.Base.prototype.disposeInternal = function() {
+  this.gl_.deleteShader(this.fshader_);
+  this.gl_.deleteShader(this.vshader_);
+  this.gl_.deleteProgram(this.program_);
+  goog.base(this, 'disposeInternal');
+};

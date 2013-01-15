@@ -8,111 +8,183 @@
 
 goog.provide('smash.Runner');
 
-goog.require('goog.style');
-goog.require('goog.ui.Component');
-goog.require('goog.webgl');
-
-goog.require('smash.Canvas');
-goog.require('smash.Stats');
-goog.require('smash.model.Cube');
-goog.require('smash.model.Sphere');
-goog.require('smash.program.Normal2Color');
+goog.require('goog.dom');
+goog.require('smash.demo.Cube');
+goog.require('smash.demo.SphereIndexedStrip');
+goog.require('smash.demo.SphereIndexedTriangles');
+goog.require('smash.demo.SphereStrip');
+goog.require('smash.demo.SphereTriangles');
 
 
 
 /**
- * @extends {goog.ui.Component}
+ *
  * @constructor
  */
 smash.Runner = function() {
-  goog.base(this);
-
   /**
-   * @type {smash.statsType}
+   * @type {Array.<smash.demo.Base>}
    * @private
    */
-  this.stats_ = smash.Stats();
+  this.demos_ = [];
 
   /**
-   * @type {smash.Canvas}
+   * @tyoe {number}
+   */
+  this.currentDemo_ = 0;
+
+  /**
+   * @type {smash.Runner.DemoStates}
    * @private
    */
-  this.canvas_ = new smash.Canvas(smash.Runner.CANVAS_WIDTH, smash.Runner.CANVAS_HEIGHT);
-  this.registerDisposable(this.canvas_);
-};
-goog.inherits(smash.Runner, goog.ui.Component);
+  this.demoState_ = smash.Runner.DemoStates.BEFORE_RUN;
 
+  /**
+   * @type {number}
+   * @private
+   */
+  this.demoStartTime_;
 
-/**
- * @const
- * @type {number}
- */
-smash.Runner.CANVAS_WIDTH = 640;
+  /**
+   * @type {number}
+   * @private
+   */
+  this.demoInitTime_;
 
+  /**
+   *
+   * @type {number}
+   * @private
+   */
+  this.framesDrawn_ = 0;
 
-/**
- * @const
- * @type {number}
- */
-smash.Runner.CANVAS_HEIGHT = 480;
+  this.table_ = goog.dom.createDom('table', '', [
+    goog.dom.createDom('thead', '', [
+      goog.dom.createDom('tr', '', [
+        goog.dom.createDom('th', '', 'Test no'),
+        goog.dom.createDom('th', '', 'Name'),
+        goog.dom.createDom('th', '', 'Frames drawn'),
+        goog.dom.createDom('th', '', 'Init time'),
+        goog.dom.createDom('th', '', 'Avg. frame time'),
+        goog.dom.createDom('th', '', 'fps')
+      ])
+    ])
+  ]);
 
+  this.tbody_ = goog.dom.createDom('tbody');
+  goog.dom.appendChild(this.table_, this.tbody_);
 
-/**
- * @override
- */
-smash.Runner.prototype.createDom = function() {
-  var element = goog.dom.createDom('div');
+  this.table_.style.position = 'absolute';
+  this.table_.style.right = '10px';
+  this.table_.style.top = '10px';
 
-  goog.style.setPosition(this.stats_.domElement, 10, 10);
-  goog.style.setStyle(this.stats_.domElement, 'position', 'absolute');
-  goog.dom.appendChild(element, this.stats_.domElement);
-
-  this.setElementInternal(element);
-};
-
-
-/**
- * @override
- */
-smash.Runner.prototype.enterDocument = function() {
-  goog.base(this, 'enterDocument');
-  this.canvas_.render();
-
-  //  var model = new smash.model.Cube(0.5);
-  var model = new smash.model.Sphere(0.5, 1000, 1000,
-      goog.webgl.TRIANGLES, goog.webgl.ARRAY_BUFFER);
-  model.setGl(this.canvas_.getGl());
-  model.setProgram(new smash.program.Normal2Color(this.canvas_.getGl()));
-  this.canvas_.addModel(model);
-};
-
-
-/**
- * @override
- */
-smash.Runner.prototype.disposeInternal = function() {
-  goog.base(this, 'disposeInternal');
-  this.canvas_ = null;
-
-  goog.dom.removeElement(this.stats_.domElement);
-  this.stats_ = null;
+  goog.dom.appendChild(window.document.body, this.table_);
 };
 
 
 /**
  *
+ * @enum {number}
  */
-smash.Runner.prototype.frame = function() {
-  this.stats_.update();
-  this.canvas_.drawFrame();
-  window['requestAnimationFrame'](this.frame);
+smash.Runner.DemoStates = {
+  BEFORE_RUN: 0,
+  INIT: 1,
+  RUNNING: 2,
+  AFTER_RUN: 3
 };
 
+
+/**
+ * @const
+ * @type {number}
+ */
+smash.Runner.DEMO_RUN_TIME = 5000;
+
+
+/**
+ *
+ * @param {smash.demo.Base} demo
+ */
+smash.Runner.prototype.addDemo = function(demo) {
+  this.demos_.push(demo);
+};
+
+
+/**
+ *
+ * @private
+ */
+smash.Runner.prototype.gatherStats_ = function() {
+  var tr = goog.dom.createDom('tr', '', [
+    goog.dom.createDom('td', '', '' + (this.currentDemo_ + 1)),
+    goog.dom.createDom('td', '', this.demos_[this.currentDemo_].getTitle()),
+    goog.dom.createDom('td', '', '' + this.framesDrawn_),
+    goog.dom.createDom('td', '', '' + this.demoInitTime_ + 'ms'),
+    goog.dom.createDom('td', '', '' + ((goog.now() - this.demoStartTime_) / this.framesDrawn_).toFixed(2) + 'ms'),
+    goog.dom.createDom('td', '', '' + (this.framesDrawn_ / (goog.now() - this.demoStartTime_) * 1000).toFixed(2))
+  ]);
+  goog.dom.appendChild(this.tbody_, tr);
+};
+
+
+/**
+ * @private
+ */
+smash.Runner.prototype.endDemo_ = function() {
+  this.gatherStats_();
+
+  this.demos_[this.currentDemo_].dispose();
+  this.currentDemo_++;
+  this.framesDrawn_ = 0;
+  this.demoState_ = smash.Runner.DemoStates.BEFORE_RUN;
+};
+
+
+/**
+ * @private
+ */
+smash.Runner.prototype.startDemo_ = function() {
+  this.demoStartTime_ = goog.now();
+  this.framesDrawn_ = 0;
+  this.demoState_ = smash.Runner.DemoStates.INIT;
+  this.demos_[this.currentDemo_].render();
+};
+
+smash.Runner.prototype.frame = function() {
+  if (this.demoState_ == smash.Runner.DemoStates.BEFORE_RUN) {
+    window.console.log('Start demo', this.currentDemo_ + 1);
+    if (this.demos_[this.currentDemo_]) {
+      this.startDemo_();
+    } else {
+      return;
+    }
+  } else if (this.demoState_ == smash.Runner.DemoStates.INIT) {
+    window.console.log('Init demo', this.currentDemo_ + 1);
+    this.demoInitTime_ = goog.now() - this.demoStartTime_;
+    this.demoStartTime_ -= this.demoInitTime_;
+    this.demoState_ = smash.Runner.DemoStates.RUNNING;
+  } else if (this.demoState_ == smash.Runner.DemoStates.RUNNING) {
+    window.console.log('Frame in demo', this.currentDemo_ + 1);
+    if (goog.now() - this.demoStartTime_ > smash.Runner.DEMO_RUN_TIME) {
+      this.demoState_ = smash.Runner.DemoStates.AFTER_RUN;
+    }
+    this.demos_[this.currentDemo_].frame();
+    this.framesDrawn_++;
+  } else if (this.demoState_ == smash.Runner.DemoStates.AFTER_RUN) {
+    window.console.log('End demo', this.currentDemo_ + 1);
+    this.endDemo_();
+  }
+  window['requestAnimationFrame'](this.frame);
+};
 
 // Init demo
 window.addEventListener('load', function() {
   var runner = new smash.Runner();
-  runner.render();
+  runner.addDemo(new smash.demo.Cube());
+  runner.addDemo(new smash.demo.SphereTriangles());
+  runner.addDemo(new smash.demo.SphereStrip());
+  runner.addDemo(new smash.demo.SphereIndexedTriangles());
+  runner.addDemo(new smash.demo.SphereIndexedStrip());
   runner.frame = runner.frame.bind(runner);
   window['requestAnimationFrame'](runner.frame);
 }, false);

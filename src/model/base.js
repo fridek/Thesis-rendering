@@ -275,3 +275,16 @@ smash.modelState = {
   BEFORE_LOAD: 0,
   LOADED: 1
 };
+
+smash.model.Base.prototype.disposeInternal = function() {
+  if (this.verticesBuffer_) {
+    this.gl_.deleteBuffer(this.verticesBuffer_);
+  }
+  if (this.normalsBuffer_) {
+    this.gl_.deleteBuffer(this.normalsBuffer_);
+  }
+  if (this.indicesBuffer_) {
+    this.gl_.deleteBuffer(this.indicesBuffer_);
+  }
+  goog.base(this, 'disposeInternal');
+};

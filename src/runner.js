@@ -185,7 +185,7 @@ smash.Runner.prototype.frame = function() {
 
 // Init demo
 window.addEventListener('load', function() {
-  window.requestAnimFrame = (function() {
+  window['requestAnimationFrame'] = (function() {
     return window['requestAnimationFrame'] ||
         window['webkitRequestAnimationFrame'] ||
         window['mozRequestAnimationFrame'] ||

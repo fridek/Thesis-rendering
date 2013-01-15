@@ -200,6 +200,17 @@ smash.Runner.prototype.frame = function() {
 
 // Init demo
 window.addEventListener('load', function() {
+  window.requestAnimFrame = (function() {
+    return window['requestAnimationFrame'] ||
+        window['webkitRequestAnimationFrame'] ||
+        window['mozRequestAnimationFrame'] ||
+        window['oRequestAnimationFrame'] ||
+        window['msRequestAnimationFrame'] ||
+        function(callback ) {
+          window.setTimeout(callback, 1000 / 60);
+        };
+  })();
+
   var runner = new smash.Runner();
   runner.addDemo(new smash.demo.Cube());
   runner.addDemo(new smash.demo.SphereTriangles());

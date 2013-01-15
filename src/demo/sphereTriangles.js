@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview ARRAY TRIANGLES Sphere demo.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
@@ -24,10 +24,13 @@ smash.demo.SphereTriangles = function() {
 };
 goog.inherits(smash.demo.SphereTriangles, smash.demo.Base);
 
+
+/**
+ *
+ */
 smash.demo.SphereTriangles.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 
-  //  var model = new smash.model.Cube(0.5);
   var model = new smash.model.Sphere(0.5, 1000, 1000,
       goog.webgl.TRIANGLES, goog.webgl.ARRAY_BUFFER);
   model.setGl(this.canvas.getGl());

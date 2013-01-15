@@ -21,7 +21,7 @@ goog.provide('smash.model.Sphere');
  * @param {number} sectors Number of sectors in each ring.
  * @param {number=} opt_type TRIANGLES or TRIANGLE_STRIP.
  * @param {number=} opt_indexingType ELEMENT_ARRAY_BUFFER or ARRAY_BUFFER.
- * @inherits {smash.model.Base}
+ * @extends {smash.model.Base}
  */
 smash.model.Sphere = function(radius, rings, sectors,
                               opt_type, opt_indexingType) {
@@ -144,7 +144,8 @@ smash.model.Sphere.prototype.initIndexed_ = function(radius, rings, sectors) {
  * @param {number} sectors Number of sectors in each ring.
  * @private
  */
-smash.model.Sphere.prototype.initIndexedStripes_ = function(radius, rings, sectors) {
+smash.model.Sphere.prototype.initIndexedStripes_ = function(radius, rings,
+    sectors) {
   var vCount = (rings + 1) * (sectors + 1);
   goog.asserts.assert(vCount < 65535, 'Uint16 overflow');
 
@@ -194,7 +195,8 @@ smash.model.Sphere.prototype.initIndexedStripes_ = function(radius, rings, secto
  * @param {number} sectors Number of sectors in each ring.
  * @private
  */
-smash.model.Sphere.prototype.initNotIndexed_ = function(radius, rings, sectors) {
+smash.model.Sphere.prototype.initNotIndexed_ = function(radius, rings,
+    sectors) {
   var vCount = (rings + 1) * (sectors + 1);
 
   this.vertices_ = new Float32Array(vCount * 3 * 6);
@@ -287,7 +289,8 @@ smash.model.Sphere.prototype.initNotIndexed_ = function(radius, rings, sectors) 
  * @param {number} sectors Number of sectors in each ring.
  * @private
  */
-smash.model.Sphere.prototype.initNotIndexedStripes_ = function(radius, rings, sectors) {
+smash.model.Sphere.prototype.initNotIndexedStripes_ = function(radius, rings,
+    sectors) {
   var vCount = (rings + 1) * (sectors + 1);
 
   this.vertices_ = new Float32Array(vCount * 3 * 6);

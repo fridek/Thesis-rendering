@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview Base model object.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
@@ -19,7 +19,7 @@ goog.require('mat4');
 /**
  * @constructor
  * @extends {goog.events.EventTarget}
- * @param {smash.modelType} modelType
+ * @param {smash.modelType} modelType Model type.
  */
 smash.model.Base = function(modelType) {
   goog.base(this);
@@ -132,7 +132,28 @@ goog.inherits(smash.model.Base, goog.events.EventTarget);
 
 
 /**
- * @return {number}
+ *
+ * @enum {number}
+ */
+smash.modelType = {
+  CUBE: 1,
+  SPHERE: 2,
+  MESH: 3
+};
+
+
+/**
+ *
+ * @enum {number}
+ */
+smash.modelState = {
+  BEFORE_LOAD: 0,
+  LOADED: 1
+};
+
+
+/**
+ * @return {number} Vertices indexing type.
  */
 smash.model.Base.prototype.getVerticesIndexingType = function() {
   return this.verticesIndexingType_;
@@ -141,7 +162,7 @@ smash.model.Base.prototype.getVerticesIndexingType = function() {
 
 /**
  *
- * @param {WebGLRenderingContext} gl
+ * @param {WebGLRenderingContext} gl WebGL context.
  */
 smash.model.Base.prototype.setGl = function(gl) {
   this.gl_ = gl;
@@ -149,7 +170,7 @@ smash.model.Base.prototype.setGl = function(gl) {
 
 
 /**
- *
+ * @param {smash.program.Base} program WebGL program.
  */
 smash.model.Base.prototype.setProgram = function(program) {
   this.program_ = program;
@@ -225,7 +246,7 @@ smash.model.Base.prototype.buildGlBuffers = function() {
 
 /**
  *
- * @param {WebGLUniformLocation} uniform
+ * @param {WebGLUniformLocation} uniform MV matrix uniform.
  */
 smash.model.Base.prototype.bindMVMatrix = function(uniform) {
   this.gl_.uniformMatrix4fv(uniform, false, this.modelView_);
@@ -234,7 +255,7 @@ smash.model.Base.prototype.bindMVMatrix = function(uniform) {
 
 /**
  *
- * @param {number} attrib
+ * @param {number} attrib Vertices attrib.
  */
 smash.model.Base.prototype.bindVertices = function(attrib) {
   this.gl_.bindBuffer(goog.webgl.ARRAY_BUFFER,
@@ -246,7 +267,7 @@ smash.model.Base.prototype.bindVertices = function(attrib) {
 
 /**
  *
- * @param {number} attrib
+ * @param {number} attrib Normals attrib.
  */
 smash.model.Base.prototype.bindNormals = function(attrib) {
   this.gl_.bindBuffer(goog.webgl.ARRAY_BUFFER,
@@ -258,24 +279,7 @@ smash.model.Base.prototype.bindNormals = function(attrib) {
 
 /**
  *
- * @enum {number}
  */
-smash.modelType = {
-  CUBE: 1,
-  SPHERE: 2,
-  MESH: 3
-};
-
-
-/**
- *
- * @enum {number}
- */
-smash.modelState = {
-  BEFORE_LOAD: 0,
-  LOADED: 1
-};
-
 smash.model.Base.prototype.disposeInternal = function() {
   if (this.verticesBuffer_) {
     this.gl_.deleteBuffer(this.verticesBuffer_);

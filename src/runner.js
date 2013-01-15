@@ -29,7 +29,8 @@ smash.Runner = function() {
   this.demos_ = [];
 
   /**
-   * @tyoe {number}
+   * @type {number}
+   * @private
    */
   this.currentDemo_ = 0;
 
@@ -102,8 +103,7 @@ smash.Runner.DEMO_RUN_TIME = 5000;
 
 
 /**
- *
- * @param {smash.demo.Base} demo
+ * @param {smash.demo.Base} demo Demo object.
  */
 smash.Runner.prototype.addDemo = function(demo) {
   this.demos_.push(demo);
@@ -120,8 +120,10 @@ smash.Runner.prototype.gatherStats_ = function() {
     goog.dom.createDom('td', '', this.demos_[this.currentDemo_].getTitle()),
     goog.dom.createDom('td', '', '' + this.framesDrawn_),
     goog.dom.createDom('td', '', '' + this.demoInitTime_ + 'ms'),
-    goog.dom.createDom('td', '', '' + ((goog.now() - this.demoStartTime_) / this.framesDrawn_).toFixed(2) + 'ms'),
-    goog.dom.createDom('td', '', '' + (this.framesDrawn_ / (goog.now() - this.demoStartTime_) * 1000).toFixed(2))
+    goog.dom.createDom('td', '', '' + ((goog.now() - this.demoStartTime_) /
+        this.framesDrawn_).toFixed(2) + 'ms'),
+    goog.dom.createDom('td', '', '' + (this.framesDrawn_ /
+        (goog.now() - this.demoStartTime_) * 1000).toFixed(2))
   ]);
   goog.dom.appendChild(this.tbody_, tr);
 };
@@ -150,6 +152,10 @@ smash.Runner.prototype.startDemo_ = function() {
   this.demos_[this.currentDemo_].render();
 };
 
+
+/**
+ *
+ */
 smash.Runner.prototype.frame = function() {
   if (this.demoState_ == smash.Runner.DemoStates.BEFORE_RUN) {
     window.console.log('Start demo', this.currentDemo_ + 1);

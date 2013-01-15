@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview Sources of all shaders.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 

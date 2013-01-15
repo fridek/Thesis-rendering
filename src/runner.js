@@ -84,6 +84,13 @@ smash.Runner = function() {
 
 
 /**
+ * @const
+ * @type {boolean}
+ */
+smash.LOG = false;
+
+
+/**
  *
  * @enum {number}
  */
@@ -158,26 +165,34 @@ smash.Runner.prototype.startDemo_ = function() {
  */
 smash.Runner.prototype.frame = function() {
   if (this.demoState_ == smash.Runner.DemoStates.BEFORE_RUN) {
-    window.console.log('Start demo', this.currentDemo_ + 1);
+    if (smash.LOG) {
+      window.console.log('Start demo', this.currentDemo_ + 1);
+    }
     if (this.demos_[this.currentDemo_]) {
       this.startDemo_();
     } else {
       return;
     }
   } else if (this.demoState_ == smash.Runner.DemoStates.INIT) {
-    window.console.log('Init demo', this.currentDemo_ + 1);
+    if (smash.LOG) {
+      window.console.log('Init demo', this.currentDemo_ + 1);
+    }
     this.demoInitTime_ = goog.now() - this.demoStartTime_;
     this.demoStartTime_ -= this.demoInitTime_;
     this.demoState_ = smash.Runner.DemoStates.RUNNING;
   } else if (this.demoState_ == smash.Runner.DemoStates.RUNNING) {
-    window.console.log('Frame in demo', this.currentDemo_ + 1);
+    if (smash.LOG) {
+      window.console.log('Frame in demo', this.currentDemo_ + 1);
+    }
     if (goog.now() - this.demoStartTime_ > smash.Runner.DEMO_RUN_TIME) {
       this.demoState_ = smash.Runner.DemoStates.AFTER_RUN;
     }
     this.demos_[this.currentDemo_].frame();
     this.framesDrawn_++;
   } else if (this.demoState_ == smash.Runner.DemoStates.AFTER_RUN) {
-    window.console.log('End demo', this.currentDemo_ + 1);
+    if (smash.LOG) {
+      window.console.log('End demo', this.currentDemo_ + 1);
+    }
     this.endDemo_();
   }
   window['requestAnimationFrame'](this.frame);

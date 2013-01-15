@@ -8,14 +8,14 @@
   "mode": "ADVANCED",
   "level": "SILENT",
   "checks": {
-    "checkRegExp": "ERROR",
-    "checkTypes": "ERROR",
-    "checkVars": "ERROR",
-    "deprecated": "ERROR",
-    "fileoverviewTags": "ERROR",
+    "checkRegExp": "WARNING",
+    "checkTypes": "WARNING",
+    "checkVars": "WARNING",
+    "deprecated": "WARNING",
+    "fileoverviewTags": "WARNING",
     "invalidCasts": "OFF",
-    "missingProperties": "ERROR",
-    "nonStandardJsDocs": "ERROR",
-    "undefinedVars": "ERROR"
+    "missingProperties": "WARNING",
+    "nonStandardJsDocs": "WARNING",
+    "undefinedVars": "WARNING"
   }
 }

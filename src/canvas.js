@@ -81,7 +81,7 @@ smash.Canvas.prototype.enterDocument = function() {
 
 /**
  *
- * @return {WebGLRenderingContext}
+ * @return {WebGLRenderingContext} WebGL context.
  */
 smash.Canvas.prototype.getGl = function() {
   return this.gl_;
@@ -90,7 +90,7 @@ smash.Canvas.prototype.getGl = function() {
 
 /**
  *
- * @param {smash.model.Base} model
+ * @param {smash.model.Base} model Model.
  */
 smash.Canvas.prototype.addModel = function(model) {
   model.setGl(this.gl_);
@@ -99,6 +99,10 @@ smash.Canvas.prototype.addModel = function(model) {
   this.models_.push(model);
 };
 
+
+/**
+ *
+ */
 smash.Canvas.prototype.drawFrame = function() {
   this.gl_.clear(this.gl_.COLOR_BUFFER_BIT);
 

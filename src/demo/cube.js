@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview Basic cube demo.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
@@ -24,6 +24,10 @@ smash.demo.Cube = function() {
 };
 goog.inherits(smash.demo.Cube, smash.demo.Base);
 
+
+/**
+ *
+ */
 smash.demo.Cube.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 

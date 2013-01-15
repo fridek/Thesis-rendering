@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview ELEMENT_ARRAY TRIANGLE_STRIP Sphere demo.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
@@ -24,10 +24,13 @@ smash.demo.SphereIndexedStrip = function() {
 };
 goog.inherits(smash.demo.SphereIndexedStrip, smash.demo.Base);
 
+
+/**
+ *
+ */
 smash.demo.SphereIndexedStrip.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 
-  //  var model = new smash.model.Cube(0.5);
   var model = new smash.model.Sphere(0.5, 252, 252,
       goog.webgl.TRIANGLE_STRIP, goog.webgl.ELEMENT_ARRAY_BUFFER);
   model.setGl(this.canvas.getGl());

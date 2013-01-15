@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview Base demo object.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
@@ -38,7 +38,8 @@ smash.demo.Base = function() {
    * @type {smash.Canvas}
    * @protected
    */
-  this.canvas = new smash.Canvas(smash.demo.Base.CANVAS_WIDTH, smash.demo.Base.CANVAS_HEIGHT);
+  this.canvas = new smash.Canvas(smash.demo.Base.CANVAS_WIDTH,
+      smash.demo.Base.CANVAS_HEIGHT);
   this.registerDisposable(this.canvas);
 };
 goog.inherits(smash.demo.Base, goog.ui.Component);
@@ -59,7 +60,7 @@ smash.demo.Base.CANVAS_HEIGHT = 480;
 
 
 /**
- * @return {string}
+ * @return {string} Demo title.
  */
 smash.demo.Base.prototype.getTitle = function() {
   return this.title_;

@@ -14,7 +14,7 @@ goog.require('smash.program.Base');
 
 /**
  * @constructor
- * @param {WebGLRenderingContext} gl
+ * @param {WebGLRenderingContext} gl WebGL context.
  * @extends {smash.program.Base}
  */
 smash.program.Normal2Color = function(gl) {
@@ -43,7 +43,7 @@ goog.inherits(smash.program.Normal2Color, smash.program.Base);
 
 
 /**
- * @param {smash.model.Base} model
+ * @override
  */
 smash.program.Normal2Color.prototype.draw = function(model) {
   goog.base(this, 'draw', model);

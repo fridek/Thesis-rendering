@@ -1,11 +1,10 @@
 /**
- * @fileoverview
+ * @fileoverview Test for smash.Canvas.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
 goog.require('goog.events');
 goog.require('goog.testing.jsunit');
-
 
 goog.require('smash.Canvas');
 
@@ -26,7 +25,8 @@ function testCleanAfterDispose() {
   canvas.dispose();
 
   var totalListenersAfter = goog.events.getTotalListenerCount();
-  assertEquals('All listeners were disposed', totalListenersBefore, totalListenersAfter);
+  assertEquals('All listeners were disposed',
+      totalListenersBefore, totalListenersAfter);
 
   assertNull('Not in dom', goog.dom.getParentElement(element));
 }

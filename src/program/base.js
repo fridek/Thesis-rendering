@@ -1,5 +1,5 @@
 /**
- * @fileoverview
+ * @fileoverview Collection of WebGL shaders and a program.
  * @author sebastian.poreba@gmail.com (Sebastian Poręba)
  */
 
@@ -8,10 +8,17 @@ goog.provide('smash.program.Base');
 goog.require('smash.program.FragmentShaderSource');
 goog.require('smash.program.VertexShaderSource');
 
+
+
+/**
+ *
+ * @param {WebGLRenderingContext} gl WebGL context.
+ * @constructor
+ */
 smash.program.Base = function(gl) {
   /**
    * @type {WebGLRenderingContext}
-   * @protected
+   * @private
    */
   this.gl_ = gl;
 
@@ -35,21 +42,31 @@ smash.program.Base = function(gl) {
 
   /**
    * @type {Object.<WebGLUniformLocation>}
+   * @private
    */
   this.uniforms_ = {};
 
   /**
    * @type {Object.<number>}
+   * @private
    */
   this.attribs_ = {};
 };
 
 
 /**
+ * @enum {number}
+ */
+smash.program.ProgramType = {
+  NORMAL2COLOR: 1
+};
+
+
+/**
  *
- * @param type
- * @param source
- * @return {WebGLShader}
+ * @param {number} type WebGL shader type.
+ * @param {string} source Source of shader to compile.
+ * @return {WebGLShader} Compiled shader.
  * @private
  */
 smash.program.Base.prototype.compileShader_ = function(type, source) {
@@ -69,7 +86,6 @@ smash.program.Base.prototype.compileShader_ = function(type, source) {
 
 
 /**
- *
  * @private
  */
 smash.program.Base.prototype.compileProgram_ = function() {
@@ -96,20 +112,16 @@ smash.program.Base.prototype.compileProgram_ = function() {
 
 
 /**
- * @enum {number}
- */
-smash.program.ProgramType = {
-  NORMAL2COLOR: 1
-};
-
-
-/**
- * @param {smash.model.Base} model
+ * @param {smash.model.Base} model Model to draw.
  */
 smash.program.Base.prototype.draw = function(model) {
   this.gl_.useProgram(this.program_);
 };
 
+
+/**
+ *
+ */
 smash.program.Base.prototype.disposeInternal = function() {
   this.gl_.deleteShader(this.fshader_);
   this.gl_.deleteShader(this.vshader_);

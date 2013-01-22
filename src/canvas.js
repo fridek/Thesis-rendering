@@ -107,6 +107,7 @@ smash.Canvas.prototype.drawFrame = function() {
   this.gl_.clear(this.gl_.COLOR_BUFFER_BIT);
 
   for (var i = 0; i < this.models_.length; i++) {
+    this.models_[i].animate();
     this.models_[i].draw();
   }
 

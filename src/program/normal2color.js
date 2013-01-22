@@ -20,6 +20,8 @@ goog.require('smash.program.Base');
 smash.program.Normal2Color = function(gl) {
   goog.base(this, gl);
 
+  this.programType = smash.program.ProgramType.NORMAL2COLOR;
+
   this.vshader_ = this.compileShader_(goog.webgl.VERTEX_SHADER,
       smash.program.VertexShaderSource.NORMAL2COLOR);
 

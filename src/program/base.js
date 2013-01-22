@@ -23,6 +23,12 @@ smash.program.Base = function(gl) {
   this.gl_ = gl;
 
   /**
+   * @type {smash.program.ProgramType}
+   * @protected
+   */
+  this.programType = smash.program.ProgramType.BASE;
+
+  /**
    * @type {WebGLShader}
    * @private
    */
@@ -58,6 +64,7 @@ smash.program.Base = function(gl) {
  * @enum {number}
  */
 smash.program.ProgramType = {
+  BASE: 0,
   NORMAL2COLOR: 1
 };
 
@@ -110,11 +117,20 @@ smash.program.Base.prototype.compileProgram_ = function() {
   }
 };
 
+/**
+ * @type {smash.program.ProgramType}
+ */
+smash.program.currentProgram;
 
 /**
  * @param {smash.model.Base} model Model to draw.
  */
 smash.program.Base.prototype.draw = function(model) {
+  if (smash.program.currentProgram == this.programType) {
+    return;
+  }
+
+  smash.program.currentProgram = this.programType;
   this.gl_.useProgram(this.program_);
 };
 

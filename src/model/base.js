@@ -178,13 +178,18 @@ smash.model.Base.prototype.setProgram = function(program) {
 
 
 /**
- *
+ * Default animation - rotation on all three axes.
  */
-smash.model.Base.prototype.draw = function() {
+smash.model.Base.prototype.animate = function() {
   mat4.rotateX(this.modelView_, this.modelView_, 1.0 / 180 * Math.PI);
   mat4.rotateY(this.modelView_, this.modelView_, 0.5 / 180 * Math.PI);
   mat4.rotateZ(this.modelView_, this.modelView_, 0.75 / 180 * Math.PI);
+};
 
+/**
+ *
+ */
+smash.model.Base.prototype.draw = function() {
   if (this.state_ == smash.modelState.LOADED) {
     this.program_.draw(this);
     if (this.verticesIndexingType_ == goog.webgl.ELEMENT_ARRAY_BUFFER) {

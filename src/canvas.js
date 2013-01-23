@@ -119,9 +119,11 @@ smash.Canvas.prototype.drawFrame = function() {
  * @override
  */
 smash.Canvas.prototype.disposeInternal = function() {
-  goog.base(this, 'disposeInternal');
-
+  window.console.log('dispose canvas');
+  this.gl_.finish();
   goog.dom.removeNode(this.getElement());
+
+  goog.base(this, 'disposeInternal');
 };
 
 

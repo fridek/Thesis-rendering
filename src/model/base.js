@@ -13,6 +13,7 @@ goog.require('goog.math.Vec3');
 
 goog.require('mat3');
 goog.require('mat4');
+goog.require('vec3');
 
 
 
@@ -43,10 +44,10 @@ smash.model.Base = function(modelType) {
   this.verticesIndexingType_ = goog.webgl.ARRAY_BUFFER;
 
   /**
-   * @type {goog.math.Vec3}
+   * @type {vec3}
    * @private
    */
-  this.position_ = new goog.math.Vec3(0, 0, 0);
+  this.position_ = vec3.create([0, 0, 0]);
 
   /**
    * @type {smash.modelState}
@@ -127,6 +128,14 @@ smash.model.Base = function(modelType) {
    */
   this.modelView_ = mat4.create();
   mat4.identity(this.modelView_);
+
+
+  /**
+   * @type {mat4}
+   * @private
+   */
+  this.originMV_ = mat4.create();
+  mat4.identity(this.modelView_);
 };
 goog.inherits(smash.model.Base, goog.events.EventTarget);
 
@@ -174,6 +183,20 @@ smash.model.Base.prototype.setGl = function(gl) {
  */
 smash.model.Base.prototype.setProgram = function(program) {
   this.program_ = program;
+};
+
+/**
+ * @param {number} x New position.
+ * @param {number} y New position.
+ * @param {number} z New position.
+ */
+smash.model.Base.prototype.setPosition = function(x, y, z) {
+  this.position_[0] = x;
+  this.position_[1] = y;
+  this.position_[2] = z;
+
+  mat4.translate(this.modelView_, this.originMV_,
+      this.position_);
 };
 
 

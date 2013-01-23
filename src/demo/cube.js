@@ -16,6 +16,7 @@ goog.require('smash.program.Normal2Color');
 /**
  *
  * @constructor
+ * @extends {smash.demo.Base}
  */
 smash.demo.Cube = function() {
   goog.base(this);

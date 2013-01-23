@@ -41,6 +41,18 @@ smash.demo.Base = function() {
   this.canvas = new smash.Canvas(smash.demo.Base.CANVAS_WIDTH,
       smash.demo.Base.CANVAS_HEIGHT);
   this.registerDisposable(this.canvas);
+
+  /**
+   * @type {number}
+   * @private
+   */
+  this.verticesTotalCount_ = 0;
+
+  /**
+   * @type {number}
+   * @private
+   */
+  this.bufferTotalSize_ = 0;
 };
 goog.inherits(smash.demo.Base, goog.ui.Component);
 
@@ -65,6 +77,26 @@ smash.demo.Base.CANVAS_HEIGHT = 480;
 smash.demo.Base.prototype.getTitle = function() {
   return this.title_;
 };
+
+/**
+ * @return {string} Total vertices count.
+ */
+smash.demo.Base.prototype.getTotalVertices = function() {
+  if (this.verticesTotalCount_ < (1000 * 1000)) {
+    return (this.verticesTotalCount_ / 1000).toFixed(1) + 'K';
+  }
+  return (this.verticesTotalCount_ / (1000 * 1000)).toFixed(1) + 'M';
+};
+/**
+ * @return {string} Total buffers length.
+ */
+smash.demo.Base.prototype.getTotalBufferSize = function() {
+  if (this.bufferTotalSize_ < (1000 * 1000)) {
+    return (this.bufferTotalSize_ / 1000).toFixed(1) + 'K';
+  }
+  return (this.bufferTotalSize_ / (1000 * 1000)).toFixed(1) + 'M';
+};
+
 
 
 /**
@@ -94,10 +126,8 @@ smash.demo.Base.prototype.enterDocument = function() {
  * @override
  */
 smash.demo.Base.prototype.disposeInternal = function() {
-  this.canvas = null;
-
   goog.dom.removeNode(this.stats_.domElement);
-  this.stats_ = null;
+
   goog.base(this, 'disposeInternal');
 };
 

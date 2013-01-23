@@ -118,7 +118,7 @@ smash.program.Base.prototype.compileProgram_ = function() {
 };
 
 /**
- * @type {smash.program.ProgramType}
+ * @type {WebGLProgram}
  */
 smash.program.currentProgram;
 
@@ -126,11 +126,11 @@ smash.program.currentProgram;
  * @param {smash.model.Base} model Model to draw.
  */
 smash.program.Base.prototype.draw = function(model) {
-  if (smash.program.currentProgram == this.programType) {
+  if (smash.program.currentProgram === this.program_) {
     return;
   }
-
-  smash.program.currentProgram = this.programType;
+  window.console.log('switching to new program');
+  smash.program.currentProgram = this.program_;
   this.gl_.useProgram(this.program_);
 };
 

@@ -39,6 +39,12 @@ smash.Runner = function() {
   this.currentDemo_ = 0;
 
   /**
+   * @type {Element}
+   * @private
+   */
+  this.currentStatsRow_;
+
+  /**
    * @type {smash.Runner.DemoStates}
    * @private
    */
@@ -140,7 +146,7 @@ smash.Runner.prototype.addDemo = function(demo) {
  * @param initTime
  * @param frameTime
  * @param fps
- * @return {!HTMLElement}
+ * @return {!Element}
  * @private
  */
 smash.Runner.prototype.statsCreateRow_ = function(

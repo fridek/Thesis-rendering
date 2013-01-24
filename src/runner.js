@@ -138,6 +138,14 @@ smash.Runner.prototype.addDemo = function(demo) {
 
 /**
  *
+ */
+smash.Runner.prototype.randomizeOrder = function() {
+  goog.array.shuffle(this.demos_);
+};
+
+
+/**
+ *
  * @param testNumber
  * @param testName
  * @param verticesCount
@@ -306,18 +314,34 @@ window.addEventListener('load', function() {
         };
   })();
 
-  var runner = new smash.Runner();
+  var input = goog.dom.createDom('input', {'type': 'text'});
+  var button = goog.dom.createDom('button', '', 'Run!');
+  goog.dom.appendChild(window.document.body,
+      goog.dom.createDom('div', '', [
+    goog.dom.createDom('label', '', 'Number of spheres'),
+    input,
+    button
+  ]));
+
+  goog.events.listenOnce(button, goog.events.EventType.CLICK,
+  function() {
+    var sphereCount = input.value || smash.Runner.SPHERE_TEST_COUNT;
+
+    var runner = new smash.Runner();
 //  runner.addDemo(new smash.demo.Cube());
-  runner.addDemo(new smash.demo.SphereTriangles(
-      smash.Runner.SPHERE_TEST_COUNT));
-  runner.addDemo(new smash.demo.SphereStrip(
-      smash.Runner.SPHERE_TEST_COUNT));
-  runner.addDemo(new smash.demo.SphereIndexedTriangles(
-      smash.Runner.SPHERE_TEST_COUNT));
-  runner.addDemo(new smash.demo.SphereIndexedStrip(
-      smash.Runner.SPHERE_TEST_COUNT));
-  runner.frame = runner.frame.bind(runner);
-  window['requestAnimationFrame'](runner.frame);
+    runner.addDemo(new smash.demo.SphereTriangles(
+        sphereCount));
+    runner.addDemo(new smash.demo.SphereStrip(
+        sphereCount));
+    runner.addDemo(new smash.demo.SphereIndexedTriangles(
+        sphereCount));
+    runner.addDemo(new smash.demo.SphereIndexedStrip(
+        sphereCount));
+//    runner.randomizeOrder();
+    runner.frame = runner.frame.bind(runner);
+    window['requestAnimationFrame'](runner.frame);
+  });
+
 }, false);
 
 
